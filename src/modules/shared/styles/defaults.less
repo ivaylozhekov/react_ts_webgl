@@ -1,0 +1,105 @@
+/* global styles */
+html, body, header {
+  min-width: @breakpoint-extrasmall;
+  overflow: hidden!important;
+}
+
+html, body {
+  height: 100%;
+}
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+  body.feedback-wizard-fix {
+    overflow: visible !important;
+  }
+}
+
+body {
+  -ms-overflow-style :scrollbar;
+}
+
+body[style="overflow: auto;"].feedback-wizard-fix {
+  overflow: initial !important;
+}
+
+body.modal-open {
+  overflow: visible !important;
+}
+
+.clearfix {
+  &::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+}
+
+.fade-out {
+  opacity: 0;
+  transition: opacity @default-transition-time;
+}
+
+.fade-in {
+  opacity: 1;
+  transition: opacity @default-transition-time;
+}
+
+.darker {
+  background-color: @blue-dark2;
+}
+
+.lnk {
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.btn {
+  /*.fade-in;*/
+
+  cursor: pointer;
+
+  &:hover {
+    opacity: .8;
+    /*transition: opacity @default-transition-time;*/
+  }
+}
+
+.input-field {
+  border: 0;
+  color: @gray-dark2;
+  width: 100%;
+}
+
+.disabled {
+  color: rgba(255, 255, 255, .3);
+  cursor: default;
+  transition: none;
+
+  &:hover {
+    opacity: 1;
+    transition: none;
+  }
+}
+
+#root,
+#root > div,
+#root > div > div {
+  height: 100%;
+}
+
+main {
+  margin: 0 auto;
+  height: 100%;
+}
+
+ul, li {
+  list-style: none;
+  margin: 0;
+}
+
+.hidden {
+  display: none;
+}

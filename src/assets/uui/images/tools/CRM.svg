@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="27" viewBox="0 0 28 27">
+  <defs>
+    <style>
+      .cls-1 {
+      fill: #464547;
+      fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <path id="CRM.svg" class="cls-1" d="M143,1526v12l-28,3Zm-7.619-7.13V1529L115,1540.81Zm-7.619-4.87v11.81l-12.762,15Z" transform="translate(-115 -1514)"/>
+</svg>

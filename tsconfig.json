@@ -1,0 +1,25 @@
+{
+  "version": "2.0.2",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es5",
+    "jsx": "react",
+    "sourceMap": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "outDir": "build",
+    "noImplicitAny": false
+  },
+  "files": [
+    "typings/index.d.ts",
+    "src/utilities/typings/index.d.ts",
+    "src/bootstrap.tsx"
+  ],
+  "exclude": [
+    "build",
+    "coverage",
+    "docs",
+    "node_modules",
+    "typings"
+  ]
+}

@@ -1,0 +1,125 @@
+// Two weeks view styles:
+.two_weeks-view {
+
+  /*.sticky {
+    .journal-table__week-days{
+      width: 25%!important;
+      left: 50%;
+      position: relative;
+    }
+  }*/
+
+  margin-left: 50%;
+  overflow-x: hidden;
+
+  @media @screen-medium-max {
+    overflow-x: scroll;
+  }
+
+  .week-column:not(:last-child) {
+    .border-right-green;
+  }
+
+  .week-column {
+    display: inline-block;
+    width: 50% !important;
+    height: 100%;
+  }
+
+  .header-section {
+    .calendar-navigation {
+      .week-column:not(:last-child) {
+        .border-right-green-dark;
+      }
+    }
+  }
+
+  /*.journal-table__all-projects-section {
+  // ToDo remove after testing     10.10.2016
+
+      .journal-table__week {
+          display: inline-block;
+          width: 50%;
+          height: 100%;
+
+          @media @screen-medium-max {
+              width: 25% !important;
+          }
+
+          @media @screen-small-max {
+              width: 25% !important;
+          }
+
+      }
+  } */
+
+  .fixed-header {
+
+    .data-column-container {
+      width: 50%;
+      margin-left: 50%;
+    }
+  }
+
+  .title-column {
+    width: 50%;
+    right: 50%;
+  }
+
+  .journal-table__scroller {
+    width: 50%;
+
+    @media @screen-medium-max {
+      display: block;
+      width: 33%;
+    }
+
+    @media @screen-small-max {
+      width: 50%;
+    }
+  }
+
+  /*.journal-table__time-column-viewer {
+      width: 50%;
+
+      // ToDo remove after testing     10.10.2016
+
+      @media @screen-medium-max {
+          width: 33%;
+      }
+
+      @media @screen-small-max {
+          width: 50%;
+      }
+
+      .journal-table__time-column {
+          width: 50%;
+
+          &:nth-of-type( n + 2 ) {
+              display: block;
+          }
+
+          &:nth-of-type( n + 3 ) {
+              display: none;
+          }
+      }
+
+      .header-section {
+          width: 100%;
+
+          @media @screen-medium-max {
+              width: 200%;
+          }
+      }
+  }  */
+
+  .data-column-scroll,
+  .table-section {
+    width: 100%;
+
+    @media @screen-medium-max {
+      width: 188%;
+    }
+  }
+
+}

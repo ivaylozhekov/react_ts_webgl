@@ -1,0 +1,81 @@
+// One week view styles:
+.week-view {
+  margin-left: 67%;
+  overflow-x: hidden;
+
+  @media @screen-medium-max {
+    margin-left: 50%;
+  }
+
+  .journal-table__time-column-viewer {
+
+    .journal-table__header-info-row {
+
+      span {
+        visibility: hidden;
+      }
+
+      .current-week-label {
+        visibility: visible;
+      }
+    }
+  }
+
+  .title-column {
+    width: 67%;
+    right: 33%;
+
+    @media @screen-medium-max {
+      width: 50%;
+      right: 50%;
+    }
+
+    @media @screen-small-max {
+      width: 50%;
+      right: 50%;
+    }
+  }
+
+  .fixed-header {
+
+    .data-column-container {
+      width: 33%;
+      float: right;
+
+      @media @screen-medium-max {
+        width: 50% !important;
+      }
+
+      .data-column-scroll {
+        margin-left: 0 !important; // Mozilla fix
+      }
+    }
+
+    .title-column {
+      width: 67%;
+
+      @media @screen-medium-max {
+        width: 50%;
+      }
+    }
+  }
+
+  .data-column-scroll,
+  .table-section {
+    width: 100%;
+  }
+
+  .week-column {
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .activity-row,
+  .journal-table__lnk-add-activity-row {
+
+    .journal-table__cell {
+      width: 14.28571429%;
+    }
+  }
+}

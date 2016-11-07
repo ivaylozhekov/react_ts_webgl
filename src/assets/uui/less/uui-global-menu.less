@@ -1,0 +1,478 @@
+﻿@import 'uui-fonts.less';
+@import 'uui-colors.less';
+
+header {
+    .uui-header {
+        .uui-header-tools {
+            > li {
+                &.uui-header-icon {
+                    &.global-menu {
+                        > a {
+                            img {
+                                height: 20px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+.uui-global-menu {
+    display: none;
+    position: absolute;
+    z-index: 1003;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: fade(@black, 50%);
+
+    a:hover {
+        text-decoration: none;
+    }
+
+    .global-menu-content {
+        width: 360px;
+        height: 100%;
+        background: @white;
+        position: fixed;
+        right: -360px;
+        z-index: 1004;
+
+        @media screen and (max-width: 768px) {
+            width: 100%; right: 100%;
+        }
+
+        .global-menu-header {
+            position: relative;
+            height: 60px;
+            line-height: 60px;
+            background: @blue;
+            min-width: 320px;
+
+            .global-menu-title {
+                display: inline-block;
+                font-family: @Oswald_Regular;
+                font-size: 16px;
+                letter-spacing: .25px;
+                text-transform: uppercase;
+                color: @white;
+                margin-left: 20px;
+            }
+
+            .global-menu-hide {
+                position: absolute;
+                right: 0;
+                top: 0;
+                width: 60px;
+                height: 60px;
+                line-height: 60px;
+                text-align: center;
+                cursor: pointer;
+                background: @blue;
+
+                span {
+                    display: block;
+                    position: absolute;
+                    height: 2px;
+                    width: 20px;
+                    background: @white;
+                    top: 30px;
+                    left: 20px;
+
+                    &:nth-child(1) {
+                        -webkit-transform: rotate(45deg);
+                        -moz-transform: rotate(45deg);
+                        -o-transform: rotate(45deg);
+                        transform: rotate(45deg);
+                    }
+
+                    &:nth-child(2) {
+                        -webkit-transform: rotate(-45deg);
+                        -moz-transform: rotate(-45deg);
+                        -o-transform: rotate(-45deg);
+                        transform: rotate(-45deg);
+                    }
+                }
+            }
+        }
+
+        .global-menu-search {
+            position: relative;
+            box-shadow: 0 1px 3px rgba(51, 51, 51, 0.2);
+            z-index: 1000;
+
+            .search {
+                width: 360px;
+                height: 40px;
+                padding: 5px 20px 5px 45px;
+                border: none;
+            }
+
+            label {
+                position: absolute;
+                top: 50%;
+                left: 20px;
+                height: 16px;
+                width: 16px;
+                margin-top: -8px;
+                margin-bottom: 0;
+                line-height: normal;
+
+                &:before {
+                    width: 16px;
+                    height: 16px;
+                    display: inline-block;
+                    content: '\f002';
+                    font-family: 'FontAwesome';
+                    color: @gray_light;
+                    font-size: 16px;
+                }
+            }
+        }
+
+        .global-menu-tools {
+            background: @gray_bg;
+
+            .mCSB_container {
+                margin-right: 0;
+            }
+
+            .mCSB_scrollTools {
+                width: 0;
+            }
+
+            .menu-tools-list {
+                .tools-list {
+                    display: inline-block;
+                    width: 100%;
+
+                    .tools-group-heading {
+                        position: relative;
+                        line-height: 40px;
+                        height: 40px;
+                        padding: 0 20px;
+                        min-width: 320px;
+
+                        .group-title-wrapper {
+                            display: inline-block;
+                            width: 100%;
+                            cursor: pointer;
+
+                            .group-title {
+                                display: inline-block;
+                                color: @gray;
+                                font-size: 16px;
+                                letter-spacing: 0.25px;
+                                font-family: @Oswald_Regular;
+                                text-transform: uppercase;
+                                vertical-align: middle;
+                            }
+
+                            .arrow {
+                                margin-right: 5px;
+                                height: 40px;
+                                line-height: 38px;
+                                color: @gray;
+                                font-size: 16px;
+                                vertical-align: middle;
+                            }
+
+                            &:hover {
+                                .group-title, .arrow {
+                                    color: @gray_medium;
+                                }
+                            }
+                        }
+                    }
+
+                    .tools-group-body {
+                        width: 100%;
+                        float: left;
+                        border: none;
+                        background: @gray_bg;
+                        padding: 0 9px;
+                        min-width: 320px;
+
+                        .tools-item {
+                            float: left;
+                            position: relative;
+                            width: 28%;
+                            min-width: 84px;
+                            padding-bottom: 28%;
+                            margin: 2.66%;
+                            background-color: @white;
+                            overflow: hidden;
+                            box-shadow: 0 0 3px 0 rgba(51, 51, 51, .2);
+
+                            .item-wrapper {
+                                position: absolute;
+                                height: 100%;
+                                width: 100%;
+                                padding: 6%;
+
+                                .item-content {
+                                    display: table;
+                                    width: 100%;
+                                    height: 100%;
+
+                                    .item-row {
+                                        display: table-row;
+
+                                        .item-cell {
+                                            display: table-cell;
+                                            width: 100%;
+                                            text-align: center;
+
+                                            &.logo {
+                                                height: 65%;
+                                                vertical-align: middle;
+
+                                                .image-wrapper {
+                                                    margin-top: 9%;
+                                                    padding: 0 25px;
+
+                                                    @media screen and (max-width: 768px) {
+                                                        padding: 0 24%;
+                                                    }
+
+                                                    .tool-logo {
+                                                        width: 100%;
+                                                        height: auto;
+                                                        min-width: 36px;
+                                                    }
+                                                }
+                                            }
+
+                                            &.name {
+                                                height: 35%;
+                                                vertical-align: middle;
+
+                                                .name-wrapper {
+                                                    width: 100%;
+                                                    max-width: 86px;
+                                                    max-height: 32px;
+                                                    overflow: hidden;
+
+                                                    @media screen and (max-width: 768px) {
+                                                        max-width: 100%;
+                                                    }
+
+                                                    .tool-name {
+                                                        font-family: @Source_Sans_Pro_Semibold;
+                                                        font-size: 14px;
+                                                        line-height: 1.2em;
+                                                        margin-bottom: 0;
+                                                        color: @gray;
+
+                                                        @media screen and (max-width: 768px) {
+                                                            font-size: 3vw;
+                                                        }
+
+                                                        @media screen and (max-width: 435px) {
+                                                            font-size: 4vw;
+                                                        }
+
+                                                        @media screen and (max-width: 320px) {
+                                                            font-size: 12px;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            &:hover {
+                                box-shadow: 0 0 10px 0 rgba(51, 51, 51, .2);
+
+                                &.community-group {
+                                    .item-wrapper {
+                                        .item-content {
+                                            .item-row {
+                                                .item-cell {
+                                                    &.name {
+                                                        .name-wrapper {
+                                                            .tool-name {
+                                                                color: @green_lime;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                &.epam-helps-group {
+                                    .item-wrapper {
+                                        .item-content {
+                                            .item-row {
+                                                .item-cell {
+                                                    &.name {
+                                                        .name-wrapper {
+                                                            .tool-name {
+                                                                color: @green_dark;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                &.lerning-knowledge-group {
+                                    .item-wrapper {
+                                        .item-content {
+                                            .item-row {
+                                                .item-cell {
+                                                    &.name {
+                                                        .name-wrapper {
+                                                            .tool-name {
+                                                                color: @blue;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                &.workbench-group {
+                                    .item-wrapper {
+                                        .item-content {
+                                            .item-row {
+                                                .item-cell {
+                                                    &.name {
+                                                        .name-wrapper {
+                                                            .tool-name {
+                                                                color: @blue_dark;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                &.analysis-reporting-group {
+                                    .item-wrapper {
+                                        .item-content {
+                                            .item-row {
+                                                .item-cell {
+                                                    &.name {
+                                                        .name-wrapper {
+                                                            .tool-name {
+                                                                color: @raspberry;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                &.project-management-group {
+                                    .item-wrapper {
+                                        .item-content {
+                                            .item-row {
+                                                .item-cell {
+                                                    &.name {
+                                                        .name-wrapper {
+                                                            .tool-name {
+                                                                color: @plum;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                &.useful-links-group {
+                                    .item-wrapper {
+                                        .item-content {
+                                            .item-row {
+                                                .item-cell {
+                                                    &.name {
+                                                        .name-wrapper {
+                                                            .tool-name {
+                                                                color: @orange;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                &.epam-sites-group {
+                                    .item-wrapper {
+                                        .item-content {
+                                            .item-row {
+                                                .item-cell {
+                                                    &.name {
+                                                        .name-wrapper {
+                                                            .tool-name {
+                                                                color: @yellow;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    &.my-tools {
+                        .tools-group-heading {
+                            .my-tools-settings {
+                                position: absolute;
+                                right: 20px;
+                                top: 15px;
+                                font-size: 16px;
+                                color: @gray_light;
+
+                                &:hover {
+                                    color: @gray;
+                                }
+                            }
+
+                            .tooltip {
+                                .tooltip-arrow {
+                                    border-left-color: transparent !important;
+                                }
+
+                                .tooltip-inner {
+                                    box-shadow: none;
+                                    background: transparent !important;
+                                    color: @gray_light;
+                                    font-family: @Source_Sans_Pro_Regular;
+                                    font-size: 14px;
+                                    text-transform: none;
+                                    padding-bottom: 8px;
+                                }
+
+                                &.left {
+                                    padding: 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,124 @@
+#root,
+#root > div,
+#root > div > div {
+  height: 100%;
+}
+
+.load-view {
+  font-size: 25px;
+  text-align: center;
+  font-family: @Oswald_Regular;
+  text-transform: uppercase;
+  color: @blue-dark;
+  margin-top: 140px;
+
+  > i {
+    font-size: 74px;
+    display: inline-block;
+    margin-bottom: 40px;
+    line-height: 67px;
+    height: 65px;
+    display: inline-block;
+    margin-bottom: 40px;
+  }
+}
+
+.login-page {
+  background: url(../../assets/images/time-login-bg.jpg);
+  background-size: cover;
+  padding-top: 130px;
+  height: 100%;
+  min-height: 900px;
+  position: relative;
+
+  .login-block {
+    width: 440px;
+    background: @gray-light;
+    opacity: 0.95;
+    margin: 0 auto;
+    z-index: 2;
+
+    > .heading {
+      background-color: @blue-dark;
+      color: @white;
+      font-family: @Oswald_Regular;
+      font-size: 34px;
+      text-transform: uppercase;
+      text-align: center;
+      height: 100px;
+      line-height: 100px;
+    }
+
+    .login-form {
+      padding: 42px 58px;
+      position: relative;
+
+      > input {
+        background-color: @yellow-mild;
+        width: 100%;
+        color: @gray_dark;
+        height: 44px;
+        font-weight: 700;
+        margin-bottom: 20px;
+      }
+
+      > button.large {
+        font-family: @Oswald_Regular;
+        font-size: 19px;
+        text-transform: uppercase;
+        margin-top: 10px;
+        width: 100%;
+
+        span {
+          display: none;
+        }
+
+        .show-progress {
+          display: block;
+          line-height: 20px;
+          width: 20px;
+          margin-right: -18px;
+          margin-left: -2px;
+          float: right;
+        }
+      }
+
+      button.large:disabled {
+        background-color: @green_dark;
+      }
+
+      > i {
+        color: @gray3;
+        position: absolute;
+        right: 68px;
+
+        &.fa-envelope {
+          top: 58px;
+          font-size: 16px;
+        }
+        &.fa-lock {
+          top: 118px;
+          font-size: 22px;
+        }
+      }
+    }
+
+    > .warning {
+      font-family: @Oswald_Regular;
+      text-transform: uppercase;
+      color: @gray5;
+      font-size: 12px;
+      padding: 0 58px 48px;
+      text-align: justify;
+    }
+  }
+
+  > footer {
+    position: absolute;
+    bottom: 0;
+
+    > div {
+      background: @black-total;
+    }
+  }
+}

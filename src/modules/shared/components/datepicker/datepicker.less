@@ -1,0 +1,264 @@
+// Higlight for week view
+.datepicker {
+  left: 10px !important;
+  height: 255px !important;
+  z-index: 50 !important;
+
+  .datepicker-days {
+    tbody {
+      tr {
+
+        @-moz-document url-prefix() {  // fix for Mozilla-only hover bug
+          td,
+          td.day.selected {
+            border: 1px solid transparent !important;
+          }
+        }
+
+        td.day:hover {
+          background-color: transparent !important;
+        }
+
+        td.day.selected {
+          background-color: transparent !important;
+          position: relative;
+        }
+
+        .day.today {
+          background-color: transparent !important;
+        }
+
+        td.day.selected::after {
+          content: '';
+          height: 30px;
+          display: block;
+          position: absolute;
+          width: 30px;
+          background: @blue-dark;
+          margin-top: -24px;
+          margin-left: -5px;
+          z-index: -40;
+
+        }
+      }
+      tr:hover::after {
+        content: '';
+        height: 30px;
+        display: block;
+        position: absolute;
+        width: 210px;
+        background: @gray-dark;
+        margin-top: 0;
+        margin-left: -210px;
+        z-index: -30;
+        opacity: 0.2;
+        border: 1px solid @black;
+      }
+    }
+  }
+
+  .datepicker-months {
+    .month.selected {
+      background-color: @blue-dark;
+      color: @white;
+    }
+  }
+
+  .datepicker-years {
+    .year.selected {
+      background-color: @blue-dark;
+      color: @white;
+    }
+  }
+}
+
+// Higlight for two_weeks view
+.two_weeks-view {
+  .datepicker {
+    .datepicker-days {
+      tbody {
+        tr {
+          position: relative;
+
+          .day.today {
+            background-color: inherit !important;
+          }
+        }
+        tr:nth-of-type(1):hover::after {
+          content: '';
+          height: 30px;
+          display: block;
+          position: absolute;
+          width: 210px;
+          background: @gray-dark;
+          margin-top: 0;
+          margin-left: -210px;
+          z-index: -30;
+          opacity: 0.2;
+          border: 1px solid @black;
+          border-top: none;
+        }
+
+        tr:nth-of-type(n+2):hover::after {
+          content: '';
+          height: 60px;
+          display: block;
+          position: absolute;
+          border: 1px solid @black;
+          width: 210px;
+          background: @gray-dark;
+          margin-top: -30px;
+          margin-left: -210px;
+          z-index: -30;
+          opacity: 0.2;
+        }
+      }
+    }
+  }
+}
+
+// Initial datepicker component styles
+.time-navigation {
+  padding-top: 10px;
+  margin-left: 15px;
+
+  @media @screen-extrasmall-max {
+    margin-left: 5px;
+  }
+
+  .datepicker-container {
+    .clearfix;
+
+    border-bottom: @gray-dark3 dashed 1px;
+    float: left;
+    font: 19px/@height-date-buttons 'Source Sans Pro Semibold';
+    margin-right: 15px;
+    padding-left: 1px;
+
+    @media @screen-extrasmall-max {
+      margin-right: 10px;
+    }
+
+    .datepicker-trigger {
+      .clearfix;
+      cursor: pointer;
+
+      &:hover {
+        opacity: .9;
+      }
+    }
+
+    .selected-period {
+      float: left;
+      font-size: 20px;
+      margin-right: 10px;
+
+      @media @screen-extrasmall-max {
+        font-size: 17px;
+        letter-spacing: -1px;
+        margin-right: 6px;
+      }
+    }
+
+    .calendar-icon {
+      cursor: pointer;
+      float: left;
+      font-size: 16px;
+
+      @media @screen-extrasmall-max {
+        font-size: 14px;
+      }
+    }
+  }
+
+  .current-week-button {
+    .btn;
+
+    background: @gray-dark2;
+    border-radius: ( @height-date-buttons / 2 );
+    color: @white;
+    float: left;
+    line-height: @height-date-buttons;
+    height: @height-date-buttons;
+    margin-right: 8px;
+    padding: 0 13px;
+    text-decoration: none;
+
+    &:hover {
+      color: inherit;
+    }
+
+    &::first-letter {
+      text-transform: uppercase;
+    }
+
+    @media @screen-extrasmall-max {
+      padding: 0 5px;
+      font-family: monospace;
+      width: 3ch;
+      overflow: hidden;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+  }
+
+  .previous-period-button {
+    .btn;
+
+    background: @gray-dark2;
+    border-radius: 50%;
+    display: block;
+    float: left;
+    margin-right: 8px;
+    position: relative;
+    width: @height-date-buttons;
+    height: @height-date-buttons;
+
+    &::before {
+      border-color: transparent @white transparent transparent;
+      border-image: none;
+      border-style: solid;
+      border-width: 7px;
+      content: "";
+      height: 0;
+      margin-top: -7px;
+      margin-left: 1px;
+      position: absolute;
+      top: 50%;
+      width: 0;
+      z-index: 1;
+    }
+
+    &::after {
+      border-color: transparent @gray-dark2 transparent transparent;
+      border-image: none;
+      border-style: solid;
+      border-width: 6px;
+      content: "";
+      height: 0;
+      margin-top: -6px;
+      margin-left: 5px;
+      position: absolute;
+      top: 50%;
+      width: 0;
+      z-index: 2;
+    }
+
+  }
+
+  .next-period-button {
+    .previous-period-button;
+
+    margin-right: 0;
+
+    &::before {
+      border-color: transparent transparent transparent @white;
+      margin-left: 11px;
+    }
+
+    &::after {
+      border-color: transparent transparent transparent @gray-dark2;
+      margin-left: 9px;
+    }
+  }
+}

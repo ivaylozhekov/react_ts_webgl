@@ -1,0 +1,43 @@
+.loader {
+  display: none;
+
+  > span {
+    display: none;
+  }
+
+  &.open {
+    background-color: @black-rgba5;
+    display: block;
+    position: fixed;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    left: 0px;
+    z-index: @overlay;
+
+    > span {
+      display: block;
+      font-size: 74px;
+      position: absolute;
+      text-align: center;
+      top: 40%;
+      width: 100%;
+    }
+
+    .fa-spin {
+      line-height: 67px;
+      height: 65px;
+    }
+  }
+}
+
+.transparent-overlay {
+  background-color: transparent;
+  display: block;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: @overlay;
+}

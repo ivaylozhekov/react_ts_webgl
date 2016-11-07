@@ -1,0 +1,14 @@
+.DS_Store
+*.orig
+*.log
+deployment.tar.gz
+/src/.env.ts
+/.vscode
+/.idea
+/build
+/node_modules
+/server/node_modules
+/server/public
+/typings
+/coverage
+/docs

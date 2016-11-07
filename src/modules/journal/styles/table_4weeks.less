@@ -1,0 +1,113 @@
+// Mont view styles:
+.month-view {
+  margin-left: 50%;
+  overflow-x: scroll;
+
+  .fixed-header {
+
+    .data-column-container {
+      width: 50%;
+      margin-left: 50%;
+    }
+
+    .title-column {
+      width: 50%;
+    }
+
+    .data-column-scroll {
+      margin-left: 0;
+    }
+  }
+
+  .title-column {
+    width: 50%;
+
+    @media @screen-medium-max {
+      width: 67%;
+    }
+
+    @media @screen-small-max {
+      width: 50%;
+    }
+  }
+
+  .journal-table__scroller {
+    display: block;
+    width: 50%;
+
+    @media @screen-medium-max {
+      width: 33%;
+    }
+
+    @media @screen-small-max {
+      width: 50%;
+    }
+  }
+
+  .journal-table__time-column-viewer {
+    width: 50%;
+
+    @media @screen-medium-max {
+      width: 33%;
+    }
+
+    @media @screen-small-max {
+      width: 50%;
+    }
+
+    .table-section {
+      width: 200%;
+
+      @media @screen-medium-max {
+        width: 400%;
+      }
+    }
+
+    .journal-table__time-column {
+      width: 20%; /* re-evaluate in JS, depend on number of weeks in month */
+
+      &:nth-of-type( n + 2 ) {
+        display: block;
+      }
+    }
+
+    .header-section {
+      width: 250%;
+
+      @media @screen-medium-max {
+        width: 500%; /* re-evaluate in JS, depend on number of weeks in month */
+      }
+    }
+  }
+
+}
+
+// second .month-view styles taken from table-refactor file
+.month-view {
+
+  .title-column {
+    width: 50%;
+  }
+
+  .journal-table__data-column,
+  .table-section {
+    width: 250%; // to re-evaluate in JS, because month has from 4 to 6 weeks
+
+    @media @screen-medium-max {
+      width: 500%; // to re-evaluate in JS, because month has from 4 to 6 weeks
+    }
+  }
+
+  .activity-row,
+  .journal-table__lnk-add-activity-row {
+
+    .journal-table__cell {
+      // 35 = weeks * days
+      //width: calc(100% / ( 35 * 2.5 )); // to re-evaluate in JS, because month has from 4 to 6 weeks ??
+
+      /*@media @screen-medium-max {
+          width: calc(100% / ( 35 * 5 )); // to re-evaluate in JS, because month has from 4 to 6 weeks ??
+      } */
+    }
+  }
+}

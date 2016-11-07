@@ -1,0 +1,59 @@
+.feedback-modal {
+
+  .modal-content {
+    width: 700px;
+    left: -50px;
+
+    .modal-header {
+      color: @white;
+      background: @gray;
+    }
+    .modal-body {
+      padding-bottom: 20px;
+      display: table;
+      width: 100%;
+      padding: 40px;
+
+      .feedback-form {
+        .control:not(:last-child) {
+          margin: 0 0 20px 0;
+        }
+        .control {
+          float: left;
+          width: 100%;
+          clear: left;
+
+          .red {
+            color: @red;
+          }
+          .uui-form-element {
+            width: 80%;
+          }
+
+          .form-label {
+            float: left;
+            width: 20%;
+            padding: 0 10px 0 0;
+          }
+          .btn-file > input {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 0;
+            opacity: 0;
+            filter: alpha(opacity=0);
+            font-size: 23px;
+            height: 100%;
+            width: 100%;
+            direction: ltr;
+            cursor: pointer;
+          }
+        }
+      }
+    }
+    .modal-footer {
+      padding: 15px;
+      border-top: 1px solid #e5e5e5;
+    }
+  }
+}

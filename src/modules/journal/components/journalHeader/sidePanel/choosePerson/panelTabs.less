@@ -1,0 +1,17 @@
+.tabs {
+  @import "./panelTabs/tabsHeader.less";
+
+  .tabs-content {
+    @import "./panelTabs/projectsTab.less";
+    @import "./panelTabs/unitsTab.less";
+    @import "./panelTabs/searchResultTab.less";
+
+    @import "./panelTabs/memberList.less";
+
+    background-color: @gray-light3;
+
+    &.active {
+      display: block;
+    }
+  }
+}

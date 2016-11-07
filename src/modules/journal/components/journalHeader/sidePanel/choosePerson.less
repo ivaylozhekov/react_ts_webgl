@@ -1,0 +1,31 @@
+.choose-person-panel {
+  @import "./choosePerson/searchPanel.less";
+  @import "./choosePerson/choosePersonHeader.less";
+  @import "./choosePerson/profileBox.less";
+  @import "./choosePerson/panelTabs.less";
+
+  left: -272px;
+  width: 272px;
+  background: white;
+
+  will-change: left;
+  transition: left 0.4s ease-out;
+
+  position: fixed;
+  z-index: @adv-modal;
+  background-color: @gray-light3;
+  border-right: @gray-light solid 1px;
+  top: 60px;
+  bottom: 0;
+  box-shadow: @default-shadow;
+  overflow: hidden;
+
+  i {
+    overflow: hidden;
+    cursor: pointer;
+  }
+}
+
+.choose-person-panel.open {
+  left: 0px;
+}

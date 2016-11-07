@@ -1,0 +1,670 @@
+.journal-table-section {
+  padding: 20px 0;
+  margin: 0 @margin-table-left-regular;
+  position: relative;
+
+  @media @screen-medium-max {
+    margin: 0 @margin-table-left-medium;
+  }
+
+  @media @screen-small-max {
+    margin: 0 @margin-table-left-small;
+  }
+}
+
+.journal-table {
+  .clearfix;
+  .border-right-light;
+
+  .table-header {
+    height: 96px;
+  }
+
+  overflow-x: scroll;
+  overflow-y: visible;
+
+  /* scrollbar styles for IE */
+  scrollbar-base-color: @blue-dark;
+  scrollbar-3dlight-color: @white;
+  scrollbar-highlight-color: @white;
+  scrollbar-track-color: @white;
+  scrollbar-arrow-color: @blue-dark;
+  scrollbar-shadow-color: @white;
+  scrollbar-dark-shadow-color: @white;
+
+  /* scrollbar styles for webkit */
+  &::-webkit-scrollbar {
+    height: 14px;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: @white;
+  }
+  &::-webkit-scrollbar-track-piece {
+    background-color: @white;
+    border: 1px solid @gray-light;
+    border-top: none;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: @blue-dark;
+    border-radius: 10px;
+    border: solid 3px @white;
+  }
+
+  .title-column {
+    border-left: @gray-light solid 1px;
+    position: absolute;
+  }
+
+  .data-column-scroll {
+    .clearfix;
+  }
+
+  // General table journalHeader styles =============================================
+  .header-row {
+    .data-column-scroll,
+    .data-column-container {
+      height: 100%;
+    }
+  }
+
+  // Calendar and Navigation styles ===========================================
+  .calendar-navigation {
+    .clearfix;
+    color: @white;
+    height: @height-header-calendar;
+
+    .title-column {
+      border-right: @gray-dark2 solid 1px;
+      background: @gray-dark;
+      height: inherit;
+    }
+
+    .week-column {
+      background: @gray-dark;
+    }
+
+    .calendar-cell {
+      line-height: @height-header-calendar;
+      border-left: @gray-dark2 solid 1px;
+      text-transform: lowercase;
+      color: @gray-light;
+
+      @media @screen-small-max {
+        letter-spacing: -1px;
+      }
+    }
+
+    .today-cell {
+      position: relative;
+      border: @coral 3px solid!important;
+
+      .day-of-week {
+        margin-top: 2px;
+      }
+
+      & span {
+        color: @green-light;
+        display: block;
+        font-size: 8px;
+        position: absolute;
+        right: 0px;
+        bottom: -11px;
+        left: 0px;
+        text-align: center;
+        text-transform: uppercase;
+      }
+    }
+
+    .day-of-week {
+      line-height: 14px;
+      font-size: 10px;
+      margin-top: 5px;
+      overflow: hidden;
+
+      &::first-letter {
+        text-transform: uppercase;
+      }
+    }
+
+    .date-of-day {
+      line-height: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      font-family: Verdana;
+    }
+
+    .day-off-cell,
+    .not-proper-period {
+      color: @gray;
+    }
+  }
+
+  // Period, Weekly and Daily totals styles ==========================================================
+  .hours-counter {
+    .clearfix;
+    background: @gray-light2-rgba90;
+    color: @gray-dark2;
+    font: 13px 'Source Sans Pro Bold';
+    height: ( @height-header-week-total-row + @height-header-daily-totals-row );
+
+    .title-column {
+      .border-right-light;
+      .border-bottom-strong;
+      z-index: 2;
+      height: inherit;
+    }
+
+    .week-column {
+      .border-bottom-strong;
+    }
+
+    .current-week {
+
+      .week-total-row {
+        background: @green-lime;
+        color: @white;
+        position: relative;
+
+        .current-week-label {
+          color: @gray-dark2;
+          float: right;
+        }
+      }
+    }
+
+    .week-total-row {
+      height: @height-header-week-total-row;
+      line-height: @height-header-week-total-row;
+      background: @green-light;
+      color: @green-dark;
+      text-align: left;
+      padding: 0 9px;
+
+      &.overtime-week {
+        background: @pink;
+        color: @plum;
+
+        .current-week-label {
+          color: inherit;
+        }
+      }
+    }
+
+    .current-project-name {
+      color: @gray-dark2;
+      font: 16px 'Oswald Regular';
+      height: @height-project-row;
+      left: 11px;
+      line-height: @height-project-row;
+      overflow: hidden;
+      position: absolute;
+      top: 6px;
+      text-transform: uppercase;
+    }
+
+    .total-hours {
+      .clearfix;
+      color: @green-lime2;
+      line-height: @height-header-week-total-row;
+      padding: 0 9px;
+      text-align: right;
+    }
+
+    .daily-totals-row {
+      .clearfix;
+      line-height: @height-header-daily-totals-row;
+      height: @height-header-daily-totals-row;
+
+      .counter-cell {
+        border: 0;
+      }
+
+      .sum-circle {
+
+        border: solid 1px @green-lime;
+        border-radius: 50%;
+        display: inline-block;
+        line-height: ( @height-header-daily-totals-row - 8px );
+        height: ( @height-header-daily-totals-row - 6px );
+        min-width: ( @height-header-daily-totals-row - 6px );
+        min-height: 20px;
+        margin: 2px;
+
+        &.past {
+          color: @white;
+          background: @green-lime;
+        }
+
+        &.future {
+          background: @white;
+          color: @green-dark;
+        }
+      }
+
+      /*.not-proper-period {         //?????
+          opacity: 0.2;
+
+      } */
+    }
+  }
+
+  // Fixed journalHeader styles =======================================================================
+  .fixed-header {
+    left: @padding-table-left-regular;
+    right: @padding-table-right-regular;
+    position: fixed;
+    top: 0;
+    width: auto;
+    z-index: @header;
+
+    @media @screen-medium-max {
+      left: @padding-table-left-medium;
+      right: @padding-table-right-medium;
+    }
+
+    @media @screen-small-max {
+      left: @padding-table-left-small;
+      right: @padding-table-right-small;
+    }
+
+    .title-column {
+      left: 0;
+    }
+
+    .data-column-scroll {
+      z-index: @header + 1;
+
+      @media @screen-large {
+        margin-left: 0 !important; // Mozilla fix
+      }
+    }
+
+    .data-column-container {
+      overflow: hidden;
+      position: relative;
+    }
+  }
+
+  // Table sections and rows styles =====================================================
+  .table-content-block {
+
+    .table-section {
+      .border-bottom-strong;
+      .clearfix;
+    }
+
+    .table-section::after {
+      .border-bottom-strong;
+
+      content: '';
+      display: block;
+      height: 0px;
+      width: 100%;
+      position: absolute;
+      left: 0;
+    }
+
+    .vacation-info {
+
+      .section-header {
+        padding: 0px;
+
+      }
+    }
+
+    .journal-table__week:not(:last-child) {
+      .border-right-green;
+    }
+
+    .section-header {
+
+      .title-column {
+        .border-bottom-light;
+        .border-right-light;
+
+        background: @gray-light2;
+        height: @height-project-row;
+        padding: 0 11px;
+      }
+
+    }
+
+    .task-header {
+
+      .title-column {
+        .border-bottom-light;
+        .border-right-light;
+
+        height: @height-task-row;
+        overflow: hidden;
+        padding: 0 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .activity-row {
+
+      .activity-name {
+        width: 100%;
+        text-align: left !important;
+        -o-text-overflow: ellipsis;
+        -ms-text-overflow: ellipsis;
+        text-overflow: ellipsis;
+        padding: 0 11px;
+      }
+
+
+
+      &:hover > div {
+        background: @blue-light2;
+      }
+
+      .day-off-cell,
+      .locked-cell,
+      .not-proper-period {
+        background-color: @gray3-rgba05;
+      }
+
+      .locked-cell {
+        color: @gray;
+      }
+
+      .title-column {
+        .border-bottom-light;
+        .border-right-light;
+
+        height: @height-activity-row;
+        overflow: hidden;
+        //padding: 0 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+    }
+  }
+
+  .table-section::first-child {
+    .border-top-strong;
+  }
+
+  .vacation,
+  .non-project {
+
+    .task-block,
+    .task-activities {
+      display: none;
+    }
+
+    &.open {
+      .task-block,
+      .task-activities {
+        display: block;
+      }
+    }
+
+    .section-header {
+
+      .project-name {
+        padding-right: 23px;
+        position: relative;
+
+        &::before {
+          border-color: @gray transparent transparent transparent;
+          border-image: none;
+          border-style: solid;
+          border-width: 6px;
+          content: "";
+          cursor: pointer;
+          height: 0;
+          margin-top: -2px;
+          position: absolute;
+          top: 50%;
+          right: 0px;
+          width: 0;
+          z-index: 1;
+        }
+
+        &::after {
+          border-color: @gray-light2 transparent transparent transparent;
+          border-image: none;
+          border-style: solid;
+          border-width: 5px;
+          content: "";
+          cursor: pointer;
+          height: 0;
+          margin-top: -3px;
+          position: absolute;
+          top: 50%;
+          right: 1px;
+          width: 0;
+          z-index: 2;
+        }
+      }
+    }
+
+  }
+
+  .vacation.open,
+  .non-project.open {
+
+    .project-name {
+
+      &::before {
+        border-color: transparent transparent @gray transparent;
+        margin-top: -9px;
+      }
+
+      &::after {
+        border-color: transparent transparent @gray-light2 transparent;
+        margin-top: -6px;
+      }
+    }
+  }
+
+  .task-header,
+  .section-header {
+    .journal-table__column-separator {
+      width: 50%;
+      .border-right-green;
+      display: list-item;
+      color: transparent;
+    }
+  }
+
+  .section-header {
+    color: @gray-dark2;
+    font: 16px 'Oswald Regular';
+    height: @height-project-row;
+    line-height: @height-project-row;
+    overflow: hidden;
+    text-transform: uppercase;
+    .border-bottom-light;
+
+    .fixed-name {
+      position: fixed;
+    }
+
+    .project-name {
+      padding-right: 64px;
+    }
+
+    .reported {
+      float: right;
+      font: 13px 'Source Sans Pro Regular';
+      line-height: @height-project-row;
+      text-transform: none;
+
+      strong {
+        font-weight: 500;
+      }
+    }
+
+    .no-logged-time {
+      display: none;
+    }
+
+    &:hover {
+
+      .lnk-add-task {
+        .fade-in;
+      }
+    }
+  }
+
+  .task-header {
+    .border-bottom-light;
+
+    color: @blue;
+    font: 15px 'Source Sans Pro Semibold';
+    height: @height-task-row;
+    line-height: @height-task-row;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    .uui-icon {
+      .fade-out;
+
+      background: @gray3;
+      border-radius: 50%;
+      color: @white;
+      cursor: default;
+      display: inline-block;
+      font-size: @height-task-row-icon;
+      height: @height-task-row-icon;
+      line-height: @height-task-row-icon;
+      margin-left: 7px;
+      text-align: center;
+      width: @height-task-row-icon;
+    }
+
+    &:hover {
+
+      .uui-icon {
+        .fade-in;
+      }
+    }
+  }
+
+  .activity-row {
+    .border-bottom-light;
+
+    height: @height-activity-row;
+    line-height: @height-activity-row;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    .add-activity {
+      .lnk;
+      margin: 0 11px;
+      color: @gray2;
+      display: block;
+    }
+  }
+
+  // General table cell and input styles ==========================================================================
+  .day-cell {
+    .border-left-light;
+    float: left;
+    text-align: center;
+    width: 14.28571429%;
+    height: inherit;
+
+    input {
+      text-align: center;
+    }
+  }
+
+  .day-cell:first-of-type {
+    border: 0;
+  }
+
+  .input-field {
+    background-color: transparent;
+    height: 100%;
+  }
+
+  .input-field.editing {
+    background-color: #fafbe6;
+  }
+
+  .input-field.dirty {
+    background-color: #FBEFF2;
+    color: coral;
+  }
+}
+
+.journal-table__scroller {
+  display: none;
+  border: @gray-light solid 1px;
+  border-top: 0;
+  float: right;
+  padding: 3px ( @width-scroller-slider + 3px ) 3px 3px;
+
+  .uui-slider {
+    border: 0;
+    height: 7px;
+
+    .ui-slider-handle {
+      background: @blue-dark;
+      border: 0;
+      cursor: ew-resize;
+      margin-left: 0;
+      width: @width-scroller-slider;
+      height: 7px;
+      top: auto;
+    }
+  }
+}
+
+// Border styles   =================================================
+
+.border-right-dark {
+  border-right: @gray-dark2 solid 1px;
+}
+
+.border-right-light {
+  border-right: @gray-light solid 1px;
+}
+
+.border-left-light {
+  border-left: @gray-light solid 1px;
+}
+
+.border-right-green {
+  border-right: @green-lime solid 1px;
+}
+
+.border-right-green-dark {
+  border-right: #749028 solid 1px;
+}
+
+.border-bottom-light {
+  border-bottom: @gray-light solid 1px;
+}
+
+.border-bottom-strong {
+  border-bottom: @gray3 solid 2px;
+}
+
+.border-top-strong {
+  border-top: @gray3 solid 2px;
+}
+
+/*.journal-table__time-column-viewer {   // ???
+    .border-right-light;
+    ...
+
+    .journal-table__time-column-wrapper {
+        width: 100%;
+    }
+
+    .journal-table__time-column {
+        float: left;
+        width: 100%;
+        ...
+        ...
+}  */
+

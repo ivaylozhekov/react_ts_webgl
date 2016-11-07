@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <style>
+      .cls-1 {
+      fill: #39c2d7;
+      fill-rule: evenodd;
+      }
+    </style>
+  </defs>
+  <path id="VideoPortal.svg" class="cls-1" d="M132,193a16,16,0,1,1-16,16A16,16,0,0,1,132,193Zm0,3a13,13,0,1,1-13,13A13,13,0,0,1,132,196Zm-3,8,9,5-9,6V204Z" transform="translate(-116 -193)"/>
+</svg>

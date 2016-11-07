@@ -1,0 +1,199 @@
+@import "./profileMenu/profileMenu.less";
+
+.app-header {
+  .uui-progress-bar.small.main-loader {
+    position: fixed;
+    width: 100%;
+    border-radius: 0px;
+    background: transparent;
+    z-index: 300;
+
+    .uui-progress {
+      -webkit-transition: width 0.5s linear;
+      -moz-transition: width 0.5s linear;
+      -o-transition: width 0.5s linear;
+      transition: width 0.5s linear;
+      will-change: width;
+      height: 3px;
+
+      border-radius: 0px !important;
+      box-shadow: 0px 0px 5px #B22746;
+
+      width: 0%;
+    }
+    .uui-progress.fast-closing {
+      -webkit-transition: width 0.2s linear;
+      -moz-transition: width 0.2s linear;
+      -o-transition: width 0.2s linear;
+      transition: width 0.2s linear;
+      width: 100% !important;
+    }
+  }
+
+  position: static;
+  z-index: auto;
+
+  .uui-header {
+    //background: @blue-dark;
+
+    .dropdown.uui-profile-menu.open {
+      .user-name {
+        //color: @blue-dark2;
+        white-space: nowrap;
+        font-weight: bold;
+        cursor: text;
+
+        &:hover,
+        &:focus {
+          background-color: inherit;
+          color: @blue-dark2;
+        }
+      }
+      .dropdown-toggle {
+        background: @blue-dark;
+      }
+    }
+
+    nav {
+      
+      .brand-logo.main {
+        float: right;
+        background-color: white;
+        margin: 0;
+        padding: 0 5px;
+        img{
+          width: 150px;
+        }
+      }
+      .brand-logo {
+        //.darker;
+        background-color: transparent;
+
+        font-size: 24px;
+        margin-right: 8px;
+        padding: 0 27px 0 17px;
+        cursor: pointer;
+        img {
+          margin: -6px 3px 0 0;
+          width: 32px;
+          vertical-align: middle;
+        }
+        span {
+          padding-left: 6px;
+        }
+      }
+
+      .tool-toggle-box {
+        cursor: pointer;
+        float: right;
+        position: relative;
+        width: 60px;
+        height: 60px;
+        background-color: @blue-dark2;
+
+        @media @screen-small-max {
+          display: none; /* tmp */
+        }
+
+        .dot-wrapper {
+          width: inherit;
+          line-height: 8px;
+          padding-top: 10px;
+          height: 100%;
+          font-size: 30px;
+          text-align: center;
+          letter-spacing: 0;
+          color: #b2f1fa;
+
+          &:hover {
+            padding-top: 6px;
+            line-height: 10px;
+            font-size: 34px;
+            letter-spacing: 0.5px;
+          }
+        }
+      }
+    }
+
+    .uui-navigation.uui-header-tools.profileMenu {
+      padding: 0;
+    }
+
+    .uui-navigation {
+
+      @media @screen-small-max {
+        display: none; /* tmp */
+      }
+
+      > li {
+
+        > a {
+          font-size: 16px;
+          padding: 1px 18px 0;
+          cursor: pointer;
+        }
+        &:hover,
+        &:focus {
+
+          > a {
+            .darker;
+          }
+        }
+
+        &.open {
+
+          > a {
+            background: none;
+            color: @blue-light;
+          }
+        }
+      }
+
+      .uui-profile-menu {
+        .fa-chevron-circle-up,
+        .fa-chevron-circle-down {
+          color: @blue-light;
+        }
+
+        .dropdown-menu {
+          width: auto !important;
+          right: 0;
+
+          > li {
+            &:hover,
+            &:focus {
+
+              > a {
+                color: white;
+              }
+            }
+            > a {
+              color: @gray-dark;
+              cursor: pointer;
+            }
+          }
+        }
+        > a {
+          padding: 0 10px;
+
+          .profile-photo {
+            margin: 13px 10px 0;
+            width: 34px;
+            height: 34px;
+
+            img {
+              border-radius: 50%;
+            }
+          }
+        }
+        &:hover,
+        &:focus {
+
+          > a {
+            background-color: @blue-dark;
+          }
+        }
+      }
+    }
+  }
+}

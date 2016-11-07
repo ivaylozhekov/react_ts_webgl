@@ -1,0 +1,99 @@
+/* Basic - Primary */
+/* Basic - Secondary */
+/* Additionally */
+/*  Lime Green  */
+.uui-icon.lime-green {
+  background: #a3c644 !important;
+  border-color: #a3c644 !important;
+  color: #ffffff !important;
+}
+.uui-icon.lime-green i {
+  color: #ffffff !important;
+}
+.uui-icon.transparent.lime-green {
+  background: transparent !important;
+  color: #a3c644 !important;
+}
+.uui-icon.transparent.lime-green i {
+  color: #a3c644 !important;
+}
+/*  Medium Gray  */
+.uui-icon.medium-gray {
+  background: #666666 !important;
+  border-color: #666666 !important;
+  color: #ffffff !important;
+}
+.uui-icon.medium-gray i {
+  color: #ffffff !important;
+}
+.uui-icon.transparent.medium-gray {
+  background: transparent !important;
+  color: #666666 !important;
+}
+.uui-icon.transparent.medium-gray i {
+  color: #666666 !important;
+}
+/*  Yellow  */
+.uui-icon.yellow {
+  background: #ffdc19 !important;
+  border-color: #ffdc19 !important;
+  color: #464547 !important;
+}
+.uui-icon.yellow i {
+  color: #464547 !important;
+}
+.uui-icon.transparent.yellow {
+  background: transparent !important;
+  color: #464547 !important;
+}
+.uui-icon.transparent.yellow i {
+  color: #464547 !important;
+}
+/*  Orange  */
+.uui-icon.orange {
+  background: #ff9b19 !important;
+  border-color: #ff9b19 !important;
+  color: #ffffff !important;
+}
+.uui-icon.orange i {
+  color: #ffffff !important;
+}
+.uui-icon.transparent.orange {
+  background: transparent !important;
+  color: #ff9b19 !important;
+}
+.uui-icon.transparent.orange i {
+  color: #ff9b19 !important;
+}
+/*  Fuchsia  */
+.uui-icon.fuchsia {
+  background: #e4445f !important;
+  border-color: #e4445f !important;
+  color: #ffffff;
+}
+.uui-icon.fuchsia i {
+  color: #ffffff !important;
+}
+.uui-icon.transparent.fuchsia {
+  background: transparent !important;
+  color: #e4445f !important;
+}
+.uui-icon.transparent.fuchsia i {
+  color: #e4445f !important;
+}
+/*  Violet  */
+.uui-icon.violet {
+  background: #8b5a9f !important;
+  border-color: #8b5a9f !important;
+  color: #ffffff !important;
+}
+.uui-icon.violet i {
+  color: #ffffff !important;
+}
+.uui-icon.transparent.violet {
+  background: transparent !important;
+  color: #8b5a9f !important;
+}
+.uui-icon.transparent.violet i {
+  color: #8b5a9f !important;
+}
