@@ -1,18 +1,19 @@
 import * as React from 'react';
-import { webGLStart, webGLStop } from './IntroWebGL'
+import Visualiser from './IntroWebGL'
 
 interface PropTypes {}
 
 
 export class Intro extends React.Component <PropTypes, {}> {
   private canvas;
+  private visualiser 
 
   public componentDidMount() {
-    webGLStart(this.canvas, true);
+    this.visualiser = new Visualiser(this.canvas, true)
   }
 
   public componentWillUnmount() {
-    webGLStop();
+    this.visualiser.webGLStop();
   }
 
   public render() {

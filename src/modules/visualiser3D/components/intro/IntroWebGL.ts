@@ -1,189 +1,262 @@
-
 import * as getContext from 'get-canvas-context';
 import { mat4, mat3, vec3 } from 'gl-matrix';
 
-
-
-var gl, vertices = [], normals = [], Tr_colors = [], Tr_indices = [], L_indices = [];
-var _canvas;
-
-Array.prototype.max = function() {
-  return Math.max.apply(null, this);
+Array.prototype.max = function () {
+    return Math.max.apply(null, this);
 };
 
-function initGL(canvas) {
-    _canvas = canvas
-    try {
-        gl = canvas.getContext("webgl");
-        gl.viewportWidth = canvas.width;
-        gl.viewportHeight = canvas.height;
-    } catch (e) {
-    }
-    if (!gl) {
-        alert("Could not initialise WebGL!");
-    }
-}
+export default class Visualiser {
 
-function getShader(gl, type) {
-    let shaderStr = "";
-    if (type == "x-fragment") {
-        shaderStr = require('webpack-glsl!./shaders/x-fragment.glsl').slice(18, -1);
-    } else if (type == "x-vertex") {
-        shaderStr = require('webpack-glsl!./shaders/x-vertex.glsl').slice(18, -1);
-    } else {
-        return null;
-    }
+    private gl;
+    private vertices;
+    private normals;
+    private Tr_colors;
+    private Tr_indices;
+    private L_indices;
+    private _canvas;
+    private shaderProgram;
+    private mvMatrix;
+    private mvMatrixStack;
+    private pMatrix;
+    private rotationMatrix;
 
-    let str = shaderStr.replace(/(\\r\\n|\\n|\\r)/gm," ");
+    private E_X1
+    private E_Y1;
 
-    let shader;
-    if (type == "x-fragment") {
-        shader = gl.createShader(gl.FRAGMENT_SHADER);
-    } else if (type == "x-vertex") {
-        shader = gl.createShader(gl.VERTEX_SHADER);
-    } else {
-        return null;
-    }
+    private Mid_X
+    private Mid_Y;
 
-    gl.shaderSource(shader, str);
-    gl.compileShader(shader);
+    private VertexPositionBuffer;
+    private FacesVertexNormalBuffer;
+    private FacesVertexColorBuffer;
+    private LinesVertexColorBuffer;
+    private FacesVertexIndexBuffer;
+    private LinesVertexIndexBuffer;
 
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        alert(gl.getShaderInfoLog(shader));
-        return null;
-    }
+    private Selected_Part_Color;
+    private Active_Part_Color;
 
-    return shader;
-}
+    private waveHeightA;
+    private waveSpeedA;
+    private waveOffsetA;
 
-var shaderProgram;
+    private waveHeightB;
+    private waveSpeedB;
+    private waveOffsetB;
+    private elapsed;
+    private lastTime;
 
-function initShaders() {
-    let fragmentShader = getShader(gl, "x-fragment");
-    let vertexShader = getShader(gl, "x-vertex");
+    private rJoint;
 
-    shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-    gl.linkProgram(shaderProgram);
+    private RI;
+    private ZI;
+    private TI;
 
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-        alert("Could not initialise shaders");
-    }
+    private canv_Width;
+    private canv_Height;
+    private Current_View;
+    private Epsilon;
 
-    gl.useProgram(shaderProgram);
+    private parts;
 
-    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+    private RS_3D;
 
-    shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
-    gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
+    constructor(canvas, animate) {
+        this.vertices = [];
+        this.normals = [];
+        this.Tr_colors = [];
+        this.Tr_indices = [];
+        this.L_indices = [];
+        this.parts = [];
+        this.RS_3D = [];
+        this.mvMatrixStack = [];
+        this.mvMatrix = mat4.create();
+        this.pMatrix = mat4.create();
+        this.rotationMatrix = mat4.create();
+        mat4.identity(this.rotationMatrix);
+        this.Selected_Part_Color = new Array(1, 0, 0, 1);
+        this.Active_Part_Color = new Array(1, 1, 0, 1);
+        this.waveHeightA = 3;
+        this.waveSpeedA = 1.5;
+        this.waveOffsetA = 4;
 
-    shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
-    gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+        this.waveHeightB = 0.01;
+        this.waveSpeedB = 2.96;
+        this.waveOffsetB = 2.3;
+        this.lastTime = 0;
+        this.rJoint = 0
+        this.Epsilon = 0.000001;
 
-    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
-    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
-    shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
-    shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
-    shaderProgram.useLightingUniform = gl.getUniformLocation(shaderProgram, "uUseLighting");
-    shaderProgram.ambientColorUniform = gl.getUniformLocation(shaderProgram, "uAmbientColor");
-    shaderProgram.lightingDirectionUniform = gl.getUniformLocation(shaderProgram, "uLightingDirection");
-    shaderProgram.directionalColorUniform = gl.getUniformLocation(shaderProgram, "uDirectionalColor");
-    shaderProgram.alphaUniform = gl.getUniformLocation(shaderProgram, "uAlpha");
-}
-
-
-var mvMatrix = mat4.create();
-var mvMatrixStack = [];
-var pMatrix = mat4.create();
-
-function mvPushMatrix() {
-    var copy = mat4.create();
-    mat4.set(mvMatrix, copy);
-    mvMatrixStack.push(copy);
-}
-
-function mvPopMatrix() {
-    if (mvMatrixStack.length == 0) {
-        throw "Invalid popMatrix!";
-    }
-    mvMatrix = mvMatrixStack.pop();
-}
-
-
-function setMatrixUniforms() {
-    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
-
-    var normalMatrix = mat3.create();
-
-    mat3.fromMat4(normalMatrix, mvMatrix)
-    mat3.invert(normalMatrix, normalMatrix)
-    //mat4.toInverseMat3(mvMatrix, normalMatrix);
-
-
-    mat3.transpose(normalMatrix, normalMatrix);
-    gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
-}
-
-
-function degToRad(degrees) {
-    return degrees * Math.PI / 180;
-}
-
-function Get3DRay(x2D, y2D) {
-    var P0 = new Array();
-    var P1 = new Array();
-
-    var x = x2D;
-    var y = y2D;
-    var viewportArray = new Array(0, 0, gl.viewportWidth, gl.viewportHeight);
-
-    var winX, winY;
-    var winZ0 = 0; var winZ1 = 1;
-
-    var posX0, posY0, posZ0;
-    var posX1, posY1, posZ1;
-
-    winX = x;
-    winY = viewportArray[3] - y;
-
-    //gl.readBuffer(gl.BACK);
-
-    var modelPointArrayResults_0 = new Array();
-    var modelPointArrayResults_1 = new Array();
-
-    var success0 = GLU.unProject(winX, winY, winZ0, mvMatrix, pMatrix, viewportArray, modelPointArrayResults_0);
-    var success1 = GLU.unProject(winX, winY, winZ1, mvMatrix, pMatrix, viewportArray, modelPointArrayResults_1);
-
-    P0[0] = modelPointArrayResults_0[0];
-    P0[1] = modelPointArrayResults_0[1];
-    P0[2] = modelPointArrayResults_0[2];
-    //
-    P1[0] = modelPointArrayResults_1[0];
-    P1[1] = modelPointArrayResults_1[1];
-    P1[2] = modelPointArrayResults_1[2];
-
-    var Mouse_Ray = {
-        Near_PNT: P0,
-        Far_PNT: P1
+        this.webGLStart(canvas, animate);
     }
 
-    return Mouse_Ray;
-}
+    private initGL(canvas) {
+        this._canvas = canvas
+        try {
+            this.gl = canvas.getContext("webgl");
+            this.gl.viewportWidth = canvas.width;
+            this.gl.viewportHeight = canvas.height;
+        } catch (e) {
+        }
+        if (!this.gl) {
+            alert("Could not initialise WebGL!");
+        }
+    }
 
-var RotationMatrix = mat4.create();
-mat4.identity(RotationMatrix);
+    private getShader(gl, type) {
+        let shaderStr = "";
+        if (type == "x-fragment") {
+            shaderStr = require('webpack-glsl!./shaders/x-fragment.glsl').slice(18, -1);
+        } else if (type == "x-vertex") {
+            shaderStr = require('webpack-glsl!./shaders/x-vertex.glsl').slice(18, -1);
+        } else {
+            return null;
+        }
 
-var E_X1, E_Y1;
+        let str = shaderStr.replace(/(\\r\\n|\\n|\\r)/gm, " ");
 
-function MouseWheelHandler(event) {
+        let shader;
+        if (type == "x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else if (type == "x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else {
+            return null;
+        }
+
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+
+        return shader;
+    }
 
 
 
-    var Sign1;
-    var delta;
+    private initShaders() {
+        let fragmentShader = this.getShader(this.gl, "x-fragment");
+        let vertexShader = this.getShader(this.gl, "x-vertex");
+
+        this.shaderProgram = this.gl.createProgram();
+        this.gl.attachShader(this.shaderProgram, vertexShader);
+        this.gl.attachShader(this.shaderProgram, fragmentShader);
+        this.gl.linkProgram(this.shaderProgram);
+
+        if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
+            alert("Could not initialise shaders");
+        }
+
+        this.gl.useProgram(this.shaderProgram);
+
+        this.shaderProgram.vertexPositionAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexPosition");
+        this.gl.enableVertexAttribArray(this.shaderProgram.vertexPositionAttribute);
+
+        this.shaderProgram.vertexNormalAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexNormal");
+        this.gl.enableVertexAttribArray(this.shaderProgram.vertexNormalAttribute);
+
+        this.shaderProgram.vertexColorAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexColor");
+        this.gl.enableVertexAttribArray(this.shaderProgram.vertexColorAttribute);
+
+        this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uPMatrix");
+        this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
+        this.shaderProgram.nMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uNMatrix");
+        this.shaderProgram.samplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler");
+        this.shaderProgram.useLightingUniform = this.gl.getUniformLocation(this.shaderProgram, "uUseLighting");
+        this.shaderProgram.ambientColorUniform = this.gl.getUniformLocation(this.shaderProgram, "uAmbientColor");
+        this.shaderProgram.lightingDirectionUniform = this.gl.getUniformLocation(this.shaderProgram, "uLightingDirection");
+        this.shaderProgram.directionalColorUniform = this.gl.getUniformLocation(this.shaderProgram, "uDirectionalColor");
+        this.shaderProgram.alphaUniform = this.gl.getUniformLocation(this.shaderProgram, "uAlpha");
+    }
+
+
+
+
+    private mvPushMatrix() {
+        let copy = mat4.create();
+        mat4.set(this.mvMatrix, copy);
+        this.mvMatrixStack.push(copy);
+    }
+
+    private mvPopMatrix() {
+        if (this.mvMatrixStack.length == 0) {
+            throw "Invalid popMatrix!";
+        }
+        this.mvMatrix = this.mvMatrixStack.pop();
+    }
+
+
+    private setMatrixUniforms() {
+        this.gl.uniformMatrix4fv(this.shaderProgram.pMatrixUniform, false, this.pMatrix);
+        this.gl.uniformMatrix4fv(this.shaderProgram.mvMatrixUniform, false, this.mvMatrix);
+
+        let normalMatrix = mat3.create();
+
+        mat3.fromMat4(normalMatrix, this.mvMatrix)
+        mat3.invert(normalMatrix, normalMatrix)
+        //mat4.toInverseMat3(mvMatrix, normalMatrix);
+
+
+        mat3.transpose(normalMatrix, normalMatrix);
+        this.gl.uniformMatrix3fv(this.shaderProgram.nMatrixUniform, false, normalMatrix);
+    }
+
+
+    private degToRad(degrees) {
+        return degrees * Math.PI / 180;
+    }
+
+    private Get3DRay(x2D, y2D) {
+        let P0 = new Array();
+        let P1 = new Array();
+
+        let x = x2D;
+        let y = y2D;
+        let viewportArray = new Array(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
+
+        let winX, winY;
+        let winZ0 = 0; let winZ1 = 1;
+
+        let posX0, posY0, posZ0;
+        let posX1, posY1, posZ1;
+
+        winX = x;
+        winY = viewportArray[3] - y;
+
+        //gl.readBuffer(gl.BACK);
+
+        let modelPointArrayResults_0 = new Array();
+        let modelPointArrayResults_1 = new Array();
+
+        let success0 = GLU.unProject(winX, winY, winZ0, this.mvMatrix, this.pMatrix, viewportArray, modelPointArrayResults_0);
+        let success1 = GLU.unProject(winX, winY, winZ1, this.mvMatrix, this.pMatrix, viewportArray, modelPointArrayResults_1);
+
+        P0[0] = modelPointArrayResults_0[0];
+        P0[1] = modelPointArrayResults_0[1];
+        P0[2] = modelPointArrayResults_0[2];
+        //
+        P1[0] = modelPointArrayResults_1[0];
+        P1[1] = modelPointArrayResults_1[1];
+        P1[2] = modelPointArrayResults_1[2];
+
+        let Mouse_Ray = {
+            Near_PNT: P0,
+            Far_PNT: P1
+        }
+
+        return Mouse_Ray;
+    }
+
+
+private MouseWheelHandler(event) {
+
+
+
+    let Sign1;
+    let delta;
     if (event.wheelDelta) {
         //alert(event.clientX);
         delta = event.wheelDelta;
@@ -200,32 +273,32 @@ function MouseWheelHandler(event) {
             Sign1 = -1.0;
     }
 
-    Current_View.PowerDX_1 = Current_View.PowerDX_1 - E_X1 * Sign1 * Math.abs(delta / 100);
-    Current_View.PowerDY_1 = Current_View.PowerDY_1 - E_Y1 * Sign1 * Math.abs(delta / 100);
-    Current_View.PowerS = Current_View.PowerS + delta;
+    this.Current_View.PowerDX_1 = this.Current_View.PowerDX_1 - this.E_X1 * Sign1 * Math.abs(delta / 100);
+    this.Current_View.PowerDY_1 = this.Current_View.PowerDY_1 - this.E_Y1 * Sign1 * Math.abs(delta / 100);
+    this.Current_View.PowerS = this.Current_View.PowerS + delta;
 
-    if (anim == false) {
-        drawScene();
+    if (this.anim == false) {
+        this.drawScene();
     }
 
 }
 
-var Mid_X, Mid_Y;
 
-function handleMouseDown(event) {
+
+private handleMouseDown(event) {
 
     if (event.which == 2) {
 
-        EX = event.clientX;
-        EY = event.clientY;
+        this.EX = event.clientX;
+        this.EY = event.clientY;
 
-        EDX = event.clientX;
-        EDY = event.clientY;
+        this.EDX = event.clientX;
+        this.EDY = event.clientY;
     }
     if (event.which == 1) {
 
-        if (SelectMode == true) {
-            var Mouse_Ray = Get3DRay(event.clientX - 362, event.clientY - 116);
+        if (this.SelectMode == true) {
+            let Mouse_Ray = this.Get3DRay(event.clientX - 362, event.clientY - 116);
 
 
             /* -------------------------------------------------  Display Mouse Ray  --------------------------------------------------
@@ -243,20 +316,20 @@ function handleMouseDown(event) {
 
             //alert(Mouse_Ray.Far_PNT);
 
-            var Hit_List = new Array();
+            let Hit_List = new Array();
 
-            for (var i_vert = 0; i_vert < vertices.length; i_vert = i_vert + 9) {
+            for (let i_vert = 0; i_vert < this.vertices.length; i_vert = i_vert + 9) {
 
-                var Vc0 = new Array(vertices[i_vert + 0], vertices[i_vert + 1], vertices[i_vert + 2]);
-                var Vc1 = new Array(vertices[i_vert + 3], vertices[i_vert + 4], vertices[i_vert + 5]);
-                var Vc2 = new Array(vertices[i_vert + 6], vertices[i_vert + 7], vertices[i_vert + 8]);
+                let Vc0 = new Array(this.vertices[i_vert + 0], this.vertices[i_vert + 1], this.vertices[i_vert + 2]);
+                let Vc1 = new Array(this.vertices[i_vert + 3], this.vertices[i_vert + 4], this.vertices[i_vert + 5]);
+                let Vc2 = new Array(this.vertices[i_vert + 6], this.vertices[i_vert + 7], this.vertices[i_vert + 8]);
 
-                var Hit_Val = { t: 0, u: 0, v: 0 }
+                let Hit_Val = { t: 0, u: 0, v: 0 }
 
-                if (Intersect_Triangle(Mouse_Ray.Near_PNT, Mouse_Ray.Far_PNT, Vc0, Vc1, Vc2, false, Hit_Val) == 1) {
+                if (this.Intersect_Triangle(Mouse_Ray.Near_PNT, Mouse_Ray.Far_PNT, Vc0, Vc1, Vc2, false, Hit_Val) == 1) {
 
-                    var HE = { Part: parts[i_vert / 9], Dist: Hit_Val.t }
-                    Hit_List[Hit_List.length] = HE;
+                    // let HE = { Part: this.parts[i_vert / 9], Dist: Hit_Val.t }
+                    // Hit_List[Hit_List.length] = HE;
 
                 }
 
@@ -265,36 +338,36 @@ function handleMouseDown(event) {
 
 
             if (Hit_List.length > 0) {
-                var HE1 = Hit_List[0];
-                var S1 = HE1.Part;
-                var S2 = HE1.Dist;
-                for (var min_ind = 1; min_ind <= Hit_List.length - 1; min_ind++) {
+                let HE1 = Hit_List[0];
+                let S1 = HE1.Part;
+                let S2 = HE1.Dist;
+                for (let min_ind = 1; min_ind <= Hit_List.length - 1; min_ind++) {
                     if (Hit_List[min_ind].Dist < S2) {
                         S2 = Hit_List[min_ind].Dist;
                         S1 = Hit_List[min_ind].Part;
                     }
                 }
-                var Prev_0 = Selected_Part;
+                let Prev_0 = this.Selected_Part;
 
-                Selected_Part = S1;
+                this.Selected_Part = S1;
 
                 if (Prev_0 != S1) {
 
-                    initColorBuffers();
-                    if (anim == false) {
+                    this.initColorBuffers();
+                    if (this.anim == false) {
                         //drawScene();
                     }
                 }
             }
         }
         else {
-            var Prev = Selected_Part;
-            Selected_Part = "";
-            Selected_Assembly = "";
+            let Prev = this.Selected_Part;
+            this.Selected_Part = "";
+            this.Selected_Assembly = "";
             if (Prev != "") {
 
-                initColorBuffers();
-                if (anim == false) {
+                this.initColorBuffers();
+                if (this.anim == false) {
                     //drawScene();
                 }
             }
@@ -305,47 +378,51 @@ function handleMouseDown(event) {
 }
 
 
-var xDeg, yDeg;
-var EX, EY;
-var EDX, EDY;
-var E_X, E_Y;
+private xDeg;
+private yDeg;
+private EX;
+private EY;
+private EDX;
+private EDY;
+private E_X;
+private E_Y;
 
-var Active_Part;
-var Active_Assembly;
-var Selected_Part;
-var Selected_Assembly;
+private Active_Part;
+private Active_Assembly;
+private Selected_Part;
+private Selected_Assembly;
 
-function handleMouseMove(event) {
+private handleMouseMove(event) {
 
-    E_X1 = Mid_X - (event.clientX - 362);
-    E_Y1 = -Mid_Y + (event.clientY - 116);
+    this.E_X1 = this.Mid_X - (event.clientX - 362);
+    this.E_Y1 = -this.Mid_Y + (event.clientY - 116);
 
     if (event.which == 2) {
-        E_X = event.clientX;
-        E_Y = event.clientY;
+        this.E_X = event.clientX;
+        this.E_Y = event.clientY;
 
         if (event.shiftKey == 1) {
-            Current_View.xDeg = Current_View.xDeg - EY + event.clientY;
-            Current_View.yDeg = Current_View.yDeg - EX + event.clientX;
+            this.Current_View.xDeg = this.Current_View.xDeg - this.EY + event.clientY;
+            this.Current_View.yDeg = this.Current_View.yDeg - this.EX + event.clientX;
             //rotate = true;
         }
         else {
-            Current_View.DistX = Current_View.DistX - EDX + event.clientX;
-            Current_View.DistY = Current_View.DistY + EDY - event.clientY;
+            this.Current_View.DistX = this.Current_View.DistX - this.EDX + event.clientX;
+            this.Current_View.DistY = this.Current_View.DistY + this.EDY - event.clientY;
         }
 
-        EX = event.clientX;
-        EY = event.clientY;
-        EDX = event.clientX;
-        EDY = event.clientY;
+        this.EX = event.clientX;
+        this.EY = event.clientY;
+        this.EDX = event.clientX;
+        this.EDY = event.clientY;
 
-        if (anim == false) {
-            drawScene();
+        if (this.anim == false) {
+            this.drawScene();
         }
     }
     else {
-        if (SelectMode == true) {
-            var Mouse_Ray = Get3DRay(event.clientX - 362, event.clientY - 116);
+        if (this.SelectMode == true) {
+            let Mouse_Ray = this.Get3DRay(event.clientX - 362, event.clientY - 116);
 
             /* -------------------------------------------------  Display Mouse Ray  --------------------------------------------------
             Temp_Lines_vertices[0] = Mouse_Ray.Near_PNT[0];
@@ -361,20 +438,20 @@ function handleMouseMove(event) {
             */
 
 
-            var Hit_List = new Array();
+            let Hit_List = new Array();
 
-            for (var i_vert = 0; i_vert < vertices.length; i_vert = i_vert + 9) {
+            for (let i_vert = 0; i_vert < this.vertices.length; i_vert = i_vert + 9) {
 
-                var Vc0 = new Array(vertices[i_vert + 0], vertices[i_vert + 1], vertices[i_vert + 2]);
-                var Vc1 = new Array(vertices[i_vert + 3], vertices[i_vert + 4], vertices[i_vert + 5]);
-                var Vc2 = new Array(vertices[i_vert + 6], vertices[i_vert + 7], vertices[i_vert + 8]);
+                let Vc0 = new Array(this.vertices[i_vert + 0], this.vertices[i_vert + 1], this.vertices[i_vert + 2]);
+                let Vc1 = new Array(this.vertices[i_vert + 3], this.vertices[i_vert + 4], this.vertices[i_vert + 5]);
+                let Vc2 = new Array(this.vertices[i_vert + 6], this.vertices[i_vert + 7], this.vertices[i_vert + 8]);
 
-                var Hit_Val = { t: 0, u: 0, v: 0 }
+                let Hit_Val = { t: 0, u: 0, v: 0 }
 
-                if (Intersect_Triangle(Mouse_Ray.Near_PNT, Mouse_Ray.Far_PNT, Vc0, Vc1, Vc2, false, Hit_Val) == 1) {
+                if (this.Intersect_Triangle(Mouse_Ray.Near_PNT, Mouse_Ray.Far_PNT, Vc0, Vc1, Vc2, false, Hit_Val) == 1) {
 
-                    var HE = { Part: parts[i_vert / 9], Dist: Hit_Val.t }
-                    Hit_List[Hit_List.length] = HE;
+                    // let HE = { Part: this.parts[i_vert / 9], Dist: Hit_Val.t }
+                    // Hit_List[Hit_List.length] = HE;
 
                 }
 
@@ -382,33 +459,33 @@ function handleMouseMove(event) {
 
 
             if (Hit_List.length > 0) {
-                var HE1 = Hit_List[0];
-                var S1 = HE1.Part;
-                var S2 = HE1.Dist;
-                for (var min_ind = 1; min_ind <= Hit_List.length - 1; min_ind++) {
+                let HE1 = Hit_List[0];
+                let S1 = HE1.Part;
+                let S2 = HE1.Dist;
+                for (let min_ind = 1; min_ind <= Hit_List.length - 1; min_ind++) {
                     if (Hit_List[min_ind].Dist < S2) {
                         S2 = Hit_List[min_ind].Dist;
                         S1 = Hit_List[min_ind].Part;
                     }
                 }
-                var Prev_0 = Active_Part;
+                let Prev_0 = this.Active_Part;
 
-                Active_Part = S1;
+                this.Active_Part = S1;
 
                 if (Prev_0 != S1) {
 
-                    initColorBuffers();
+                    this.initColorBuffers();
                     //drawScene();
                 }
             }
         }
         else {
-            var Prev = Active_Part;
-            Active_Part = "";
-            Active_Assembly = "";
+            let Prev = this.Active_Part;
+            this.Active_Part = "";
+            this.Active_Assembly = "";
             if (Prev != "") {
 
-                initColorBuffers();
+                this.initColorBuffers();
                 //drawScene();
             }
 
@@ -417,198 +494,173 @@ function handleMouseMove(event) {
     }
 }
 
-var VertexPositionBuffer;
-var FacesVertexNormalBuffer;
-var FacesVertexColorBuffer;
-var LinesVertexColorBuffer;
-var FacesVertexIndexBuffer;
-var LinesVertexIndexBuffer;
 
 
+private initColorBuffers() {
 
-var Selected_Part_Color = new Array(1, 0, 0, 1);
-var Active_Part_Color = new Array(1, 1, 0, 1);
+    if (this.Active_Part != "") {
+        let Tr_colors_1 = new Array();
 
-function initColorBuffers() {
+        for (let p_num = 0; p_num < this.parts.length; p_num++) {
 
-    if (Active_Part != "") {
-        var Tr_colors_1 = new Array();
+            Tr_colors_1[p_num * 12 + 0] = this.Tr_colors[p_num * 12 + 0];
+            Tr_colors_1[p_num * 12 + 1] = this.Tr_colors[p_num * 12 + 1];
+            Tr_colors_1[p_num * 12 + 2] = this.Tr_colors[p_num * 12 + 2];
+            Tr_colors_1[p_num * 12 + 3] = this.Tr_colors[p_num * 12 + 3];
+            Tr_colors_1[p_num * 12 + 4] = this.Tr_colors[p_num * 12 + 4];
+            Tr_colors_1[p_num * 12 + 5] = this.Tr_colors[p_num * 12 + 5];
+            Tr_colors_1[p_num * 12 + 6] = this.Tr_colors[p_num * 12 + 6];
+            Tr_colors_1[p_num * 12 + 7] = this.Tr_colors[p_num * 12 + 7];
+            Tr_colors_1[p_num * 12 + 8] = this.Tr_colors[p_num * 12 + 8];
+            Tr_colors_1[p_num * 12 + 9] = this.Tr_colors[p_num * 12 + 9];
+            Tr_colors_1[p_num * 12 + 10] = this.Tr_colors[p_num * 12 + 10];
+            Tr_colors_1[p_num * 12 + 11] = this.Tr_colors[p_num * 12 + 11];
 
-        for (var p_num = 0; p_num < parts.length; p_num++) {
-
-            Tr_colors_1[p_num * 12 + 0] = Tr_colors[p_num * 12 + 0];
-            Tr_colors_1[p_num * 12 + 1] = Tr_colors[p_num * 12 + 1];
-            Tr_colors_1[p_num * 12 + 2] = Tr_colors[p_num * 12 + 2];
-            Tr_colors_1[p_num * 12 + 3] = Tr_colors[p_num * 12 + 3];
-            Tr_colors_1[p_num * 12 + 4] = Tr_colors[p_num * 12 + 4];
-            Tr_colors_1[p_num * 12 + 5] = Tr_colors[p_num * 12 + 5];
-            Tr_colors_1[p_num * 12 + 6] = Tr_colors[p_num * 12 + 6];
-            Tr_colors_1[p_num * 12 + 7] = Tr_colors[p_num * 12 + 7];
-            Tr_colors_1[p_num * 12 + 8] = Tr_colors[p_num * 12 + 8];
-            Tr_colors_1[p_num * 12 + 9] = Tr_colors[p_num * 12 + 9];
-            Tr_colors_1[p_num * 12 + 10] = Tr_colors[p_num * 12 + 10];
-            Tr_colors_1[p_num * 12 + 11] = Tr_colors[p_num * 12 + 11];
-
-            if (parts[p_num] == Active_Part) {
-                Tr_colors_1[p_num * 12 + 0] = Active_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 1] = Active_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 2] = Active_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 3] = Active_Part_Color[3];
-                Tr_colors_1[p_num * 12 + 4] = Active_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 5] = Active_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 6] = Active_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 7] = Active_Part_Color[3];
-                Tr_colors_1[p_num * 12 + 8] = Active_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 9] = Active_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 10] = Active_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 11] = Active_Part_Color[3];
+            if (this.parts[p_num] == this.Active_Part) {
+                Tr_colors_1[p_num * 12 + 0] = this.Active_Part_Color[0];
+                Tr_colors_1[p_num * 12 + 1] = this.Active_Part_Color[1];
+                Tr_colors_1[p_num * 12 + 2] = this.Active_Part_Color[2];
+                Tr_colors_1[p_num * 12 + 3] = this.Active_Part_Color[3];
+                Tr_colors_1[p_num * 12 + 4] = this.Active_Part_Color[0];
+                Tr_colors_1[p_num * 12 + 5] = this.Active_Part_Color[1];
+                Tr_colors_1[p_num * 12 + 6] = this.Active_Part_Color[2];
+                Tr_colors_1[p_num * 12 + 7] = this.Active_Part_Color[3];
+                Tr_colors_1[p_num * 12 + 8] = this.Active_Part_Color[0];
+                Tr_colors_1[p_num * 12 + 9] = this.Active_Part_Color[1];
+                Tr_colors_1[p_num * 12 + 10] = this.Active_Part_Color[2];
+                Tr_colors_1[p_num * 12 + 11] = this.Active_Part_Color[3];
             }
 
-            if (parts[p_num] == Selected_Part) {
-                Tr_colors_1[p_num * 12 + 0] = Selected_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 1] = Selected_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 2] = Selected_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 3] = Selected_Part_Color[3];
-                Tr_colors_1[p_num * 12 + 4] = Selected_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 5] = Selected_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 6] = Selected_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 7] = Selected_Part_Color[3];
-                Tr_colors_1[p_num * 12 + 8] = Selected_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 9] = Selected_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 10] = Selected_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 11] = Selected_Part_Color[3];
+            if (this.parts[p_num] == this.Selected_Part) {
+                Tr_colors_1[p_num * 12 + 0] = this.Selected_Part_Color[0];
+                Tr_colors_1[p_num * 12 + 1] = this.Selected_Part_Color[1];
+                Tr_colors_1[p_num * 12 + 2] = this.Selected_Part_Color[2];
+                Tr_colors_1[p_num * 12 + 3] = this.Selected_Part_Color[3];
+                Tr_colors_1[p_num * 12 + 4] = this.Selected_Part_Color[0];
+                Tr_colors_1[p_num * 12 + 5] = this.Selected_Part_Color[1];
+                Tr_colors_1[p_num * 12 + 6] = this.Selected_Part_Color[2];
+                Tr_colors_1[p_num * 12 + 7] = this.Selected_Part_Color[3];
+                Tr_colors_1[p_num * 12 + 8] = this.Selected_Part_Color[0];
+                Tr_colors_1[p_num * 12 + 9] = this.Selected_Part_Color[1];
+                Tr_colors_1[p_num * 12 + 10] = this.Selected_Part_Color[2];
+                Tr_colors_1[p_num * 12 + 11] = this.Selected_Part_Color[3];
             }
 
         }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, FacesVertexColorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Tr_colors_1), gl.STREAM_DRAW);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexColorBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(Tr_colors_1), this.gl.STREAM_DRAW);
 
     }
     else {
-        var Tr_colors_2 = new Array();
+        let Tr_colors_2 = new Array();
 
-        for (var p_num_2 = 0; p_num_2 < parts.length; p_num_2++) {
+        for (let p_num_2 = 0; p_num_2 < this.parts.length; p_num_2++) {
 
-            if (parts[p_num_2] == Selected_Part) {
-                Tr_colors_2[p_num_2 * 12 + 0] = Selected_Part_Color[0];
-                Tr_colors_2[p_num_2 * 12 + 1] = Selected_Part_Color[1];
-                Tr_colors_2[p_num_2 * 12 + 2] = Selected_Part_Color[2];
-                Tr_colors_2[p_num_2 * 12 + 3] = Selected_Part_Color[3];
-                Tr_colors_2[p_num_2 * 12 + 4] = Selected_Part_Color[0];
-                Tr_colors_2[p_num_2 * 12 + 5] = Selected_Part_Color[1];
-                Tr_colors_2[p_num_2 * 12 + 6] = Selected_Part_Color[2];
-                Tr_colors_2[p_num_2 * 12 + 7] = Selected_Part_Color[3];
-                Tr_colors_2[p_num_2 * 12 + 8] = Selected_Part_Color[0];
-                Tr_colors_2[p_num_2 * 12 + 9] = Selected_Part_Color[1];
-                Tr_colors_2[p_num_2 * 12 + 10] = Selected_Part_Color[2];
-                Tr_colors_2[p_num_2 * 12 + 11] = Selected_Part_Color[3];
+            if (this.parts[p_num_2] == this.Selected_Part) {
+                Tr_colors_2[p_num_2 * 12 + 0] = this.Selected_Part_Color[0];
+                Tr_colors_2[p_num_2 * 12 + 1] = this.Selected_Part_Color[1];
+                Tr_colors_2[p_num_2 * 12 + 2] = this.Selected_Part_Color[2];
+                Tr_colors_2[p_num_2 * 12 + 3] = this.Selected_Part_Color[3];
+                Tr_colors_2[p_num_2 * 12 + 4] = this.Selected_Part_Color[0];
+                Tr_colors_2[p_num_2 * 12 + 5] = this.Selected_Part_Color[1];
+                Tr_colors_2[p_num_2 * 12 + 6] = this.Selected_Part_Color[2];
+                Tr_colors_2[p_num_2 * 12 + 7] = this.Selected_Part_Color[3];
+                Tr_colors_2[p_num_2 * 12 + 8] = this.Selected_Part_Color[0];
+                Tr_colors_2[p_num_2 * 12 + 9] = this.Selected_Part_Color[1];
+                Tr_colors_2[p_num_2 * 12 + 10] = this.Selected_Part_Color[2];
+                Tr_colors_2[p_num_2 * 12 + 11] = this.Selected_Part_Color[3];
             }
             else {
-                Tr_colors_2[p_num_2 * 12 + 0] = Tr_colors[p_num_2 * 12 + 0];
-                Tr_colors_2[p_num_2 * 12 + 1] = Tr_colors[p_num_2 * 12 + 1];
-                Tr_colors_2[p_num_2 * 12 + 2] = Tr_colors[p_num_2 * 12 + 2];
-                Tr_colors_2[p_num_2 * 12 + 3] = Tr_colors[p_num_2 * 12 + 3];
-                Tr_colors_2[p_num_2 * 12 + 4] = Tr_colors[p_num_2 * 12 + 4];
-                Tr_colors_2[p_num_2 * 12 + 5] = Tr_colors[p_num_2 * 12 + 5];
-                Tr_colors_2[p_num_2 * 12 + 6] = Tr_colors[p_num_2 * 12 + 6];
-                Tr_colors_2[p_num_2 * 12 + 7] = Tr_colors[p_num_2 * 12 + 7];
-                Tr_colors_2[p_num_2 * 12 + 8] = Tr_colors[p_num_2 * 12 + 8];
-                Tr_colors_2[p_num_2 * 12 + 9] = Tr_colors[p_num_2 * 12 + 9];
-                Tr_colors_2[p_num_2 * 12 + 10] = Tr_colors[p_num_2 * 12 + 10];
-                Tr_colors_2[p_num_2 * 12 + 11] = Tr_colors[p_num_2 * 12 + 11];
+                Tr_colors_2[p_num_2 * 12 + 0] = this.Tr_colors[p_num_2 * 12 + 0];
+                Tr_colors_2[p_num_2 * 12 + 1] = this.Tr_colors[p_num_2 * 12 + 1];
+                Tr_colors_2[p_num_2 * 12 + 2] = this.Tr_colors[p_num_2 * 12 + 2];
+                Tr_colors_2[p_num_2 * 12 + 3] = this.Tr_colors[p_num_2 * 12 + 3];
+                Tr_colors_2[p_num_2 * 12 + 4] = this.Tr_colors[p_num_2 * 12 + 4];
+                Tr_colors_2[p_num_2 * 12 + 5] = this.Tr_colors[p_num_2 * 12 + 5];
+                Tr_colors_2[p_num_2 * 12 + 6] = this.Tr_colors[p_num_2 * 12 + 6];
+                Tr_colors_2[p_num_2 * 12 + 7] = this.Tr_colors[p_num_2 * 12 + 7];
+                Tr_colors_2[p_num_2 * 12 + 8] = this.Tr_colors[p_num_2 * 12 + 8];
+                Tr_colors_2[p_num_2 * 12 + 9] = this.Tr_colors[p_num_2 * 12 + 9];
+                Tr_colors_2[p_num_2 * 12 + 10] = this.Tr_colors[p_num_2 * 12 + 10];
+                Tr_colors_2[p_num_2 * 12 + 11] = this.Tr_colors[p_num_2 * 12 + 11];
             }
 
         }
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, FacesVertexColorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Tr_colors_2), gl.STREAM_DRAW);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexColorBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(Tr_colors_2), this.gl.STREAM_DRAW);
 
     }
 
 }
 
 
-function normalize(v)
-        {
-            var d = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-            var v1 = new Array( v[0] /= d, v[1] /= d, v[2] /= d);
-            return v1;
+private normalize(v) {
+    let d = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    let v1 = new Array(v[0] /= d, v[1] /= d, v[2] /= d);
+    return v1;
 
-        }
+}
 
-        /* normalized cross product of non-parallel vectors */
-        function normCrossProd(u, v)
-        {
-            var n1 = new Array(u[1] * v[2] - v[1] * u[2],
-                              u[2] * v[0] - v[2] * u[0],
-                              u[0] * v[1] - v[0] * u[1]
-                             );
+/* normalized cross product of non-parallel vectors */
+private normCrossProd(u, v) {
+    let n1 = new Array(u[1] * v[2] - v[1] * u[2],
+        u[2] * v[0] - v[2] * u[0],
+        u[0] * v[1] - v[0] * u[1]
+    );
 
-            return normalize(n1);
-        }
-        function normFace(v1, v2, v3)
-        {
-            var d1 = new Array(), d2 = new Array();
-            var k;
-            for (k = 0; k <= 2; k++)
-            {
-                d1[k] = v2[k] - v1[k];
-                d2[k] = v3[k] - v2[k];
-            }
+    return this.normalize(n1);
+}
+private normFace(v1, v2, v3) {
+    let d1 = new Array(), d2 = new Array();
+    let k;
+    for (k = 0; k <= 2; k++) {
+        d1[k] = v2[k] - v1[k];
+        d2[k] = v3[k] - v2[k];
+    }
 
-            return normCrossProd(d1, d2);
-        }
+    return this.normCrossProd(d1, d2);
+}
 
-        function Vector_Median( u, v)
-        {
-            if (u == null && v == null)
-                return null;
-            if (u == null)
-                return v;
-            if (v == null)
-                return u;
+private Vector_Median(u, v) {
+    if (u == null && v == null)
+        return null;
+    if (u == null)
+        return v;
+    if (v == null)
+        return u;
 
 
-            var l_u = Math.sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
-            var l_v = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    let l_u = Math.sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
+    let l_v = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 
-            var n1 =  new Array(u[0] * l_v + l_u * v[0],
-                                u[1] * l_v + l_u * v[1],
-                                u[2] * l_v + l_u * v[2]
-                                );
+    let n1 = new Array(u[0] * l_v + l_u * v[0],
+        u[1] * l_v + l_u * v[1],
+        u[2] * l_v + l_u * v[2]
+    );
 
-            var l_n = Math.sqrt(n1[0] * n1[0] + n1[1] * n1[1] + n1[2] * n1[2]);
-            n1[0] = n1[0] / l_n;
-            n1[1] = n1[1] / l_n;
-            n1[2] = n1[2] / l_n;
+    let l_n = Math.sqrt(n1[0] * n1[0] + n1[1] * n1[1] + n1[2] * n1[2]);
+    n1[0] = n1[0] / l_n;
+    n1[1] = n1[1] / l_n;
+    n1[2] = n1[2] / l_n;
 
-            return n1;
-        }
+    return n1;
+}
 
+private animate() {
 
-
-var waveHeightA = 3; //265;
-var waveSpeedA = 1.5;
-var waveOffsetA = 4; // 1.2834448552536923;
-
-var waveHeightB = 0.01;
-var waveSpeedB = 2.96;
-var waveOffsetB = 2.3;
-var elapsed;
-function animate() {
-
-    //var timeNow = new Date().getTime();
+    //let timeNow = new Date().getTime();
     //if (lastTime != 0) {
-    //var elapsed = timeNow - lastTime;
+    //let elapsed = timeNow - lastTime;
 
     //if(splashClock != undefined){
-    //var t = splashClock.getElapsedTime();
+    //let t = splashClock.getElapsedTime();
 
 
     //change vertices and normal array here -------------------------------
     /*
-    var t = splashClock.getElapsedTime();
+    let t = splashClock.getElapsedTime();
 
     waves(waveTime * 0.012);
 
@@ -623,72 +675,72 @@ function animate() {
 
 
 
-    for (var i = 0; i < vertices.length; i = i + 3) {
+    for (let i = 0; i < this.vertices.length; i = i + 3) {
 
-        var x = vertices[i + 0];
-        var y = vertices[i + 2];
+        let x = this.vertices[i + 0];
+        let y = this.vertices[i + 2];
         //alert("lalal");
-        vertices[i + 1] = waveA(x, y, elapsed * 0.012);
-        vertices[i + 1] = vertices[i + 1] + waveB(x, y, elapsed * 0.012);
+        this.vertices[i + 1] = this.waveA(x, y, this.elapsed * 0.012);
+        this.vertices[i + 1] = this.vertices[i + 1] + this.waveB(x, y, this.elapsed * 0.012);
     }
-    if (show_faces) {
-        if (elapsed % 3 == 0) {
-            var Sa_Num = Math.sqrt(vertices.length / 3);
-            var RS_Count = Sa_Num;
-            var N1 = new Array();
-            var N2 = new Array();
-            var N3 = new Array();
-            var N4 = new Array();
+    if (this.show_faces) {
+        if (this.elapsed % 3 == 0) {
+            let Sa_Num = Math.sqrt(this.vertices.length / 3);
+            let RS_Count = Sa_Num;
+            let N1 = new Array();
+            let N2 = new Array();
+            let N3 = new Array();
+            let N4 = new Array();
 
-            var N_Mid = new Array();
+            let N_Mid = new Array();
 
-            for (var i = 0; i < normals.length; i = i + 3) {
+            for (let i = 0; i < this.normals.length; i = i + 3) {
 
-                var Row = parseInt(i / 3 / Sa_Num); //first is 0
-                var Column = parseInt(i / 3 - Row * Sa_Num); //first is 0
+                let Row = parseInt((i / 3 / Sa_Num).toString());
+                let Column = parseInt((i / 3 - Row * Sa_Num).toString());
 
                 if (Column < Sa_Num - 2 && Row < RS_Count - 2) {
-                    var v1 = new Array(vertices[i], vertices[i + 1], vertices[i + 2]);
-                    var v2 = new Array(vertices[i + 3], vertices[(i + 3) + 1], vertices[(i + 3) + 2]);
-                    var v3 = new Array(vertices[((Row + 1) * Sa_Num + Column) * 3], vertices[((Row + 1) * Sa_Num + Column) * 3 + 1], vertices[((Row + 1) * Sa_Num + Column) * 3 + 2]);
-                    N1 = normFace(v1, v2, v3);
+                    let v1 = new Array(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2]);
+                    let v2 = new Array(this.vertices[i + 3], this.vertices[(i + 3) + 1], this.vertices[(i + 3) + 2]);
+                    let v3 = new Array(this.vertices[((Row + 1) * Sa_Num + Column) * 3], this.vertices[((Row + 1) * Sa_Num + Column) * 3 + 1], this.vertices[((Row + 1) * Sa_Num + Column) * 3 + 2]);
+                    N1 = this.normFace(v1, v2, v3);
                 }
                 else {
                     N1 = null; // ??????????????
                 }
 
                 if (Column < Sa_Num - 2 && Row > 0) {
-                    var v4 = new Array(vertices[i], vertices[i + 1], vertices[i + 2]);
-                    var v5 = new Array(vertices[((Row - 1) * Sa_Num + Column) * 3], vertices[((Row - 1) * Sa_Num + Column) * 3 + 1], vertices[((Row - 1) * Sa_Num + Column) * 3 + 2]);
-                    var v6 = new Array(vertices[i + 3], vertices[(i + 3) + 1], vertices[(i + 3) + 2]);
-                    N2 = normFace(v4, v5, v6);
+                    let v4 = new Array(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2]);
+                    let v5 = new Array(this.vertices[((Row - 1) * Sa_Num + Column) * 3], this.vertices[((Row - 1) * Sa_Num + Column) * 3 + 1], this.vertices[((Row - 1) * Sa_Num + Column) * 3 + 2]);
+                    let v6 = new Array(this.vertices[i + 3], this.vertices[(i + 3) + 1], this.vertices[(i + 3) + 2]);
+                    N2 = this.normFace(v4, v5, v6);
                 }
                 else {
                     N2 = null; // ??????????????
                 }
 
                 if (Column > 0 && Row > 0) {
-                    var v7 = new Array(vertices[i], vertices[i + 1], vertices[i + 2]);
-                    var v8 = new Array(vertices[i - 3], vertices[(i - 3) + 1], vertices[(i - 3) + 2]);
-                    var v9 = new Array(vertices[((Row - 1) * Sa_Num + Column) * 3], vertices[((Row - 1) * Sa_Num + Column) * 3 + 1], vertices[((Row - 1) * Sa_Num + Column) * 3 + 2]);
-                    N3 = normFace(v7, v8, v9);
+                    let v7 = new Array(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2]);
+                    let v8 = new Array(this.vertices[i - 3], this.vertices[(i - 3) + 1], this.vertices[(i - 3) + 2]);
+                    let v9 = new Array(this.vertices[((Row - 1) * Sa_Num + Column) * 3], this.vertices[((Row - 1) * Sa_Num + Column) * 3 + 1], this.vertices[((Row - 1) * Sa_Num + Column) * 3 + 2]);
+                    N3 = this.normFace(v7, v8, v9);
                 }
                 else {
-                    N3 = null; // ??????????????
+                    N3 = null; // ??????????????`
                 }
 
                 if (Column > 0 && Row < RS_Count - 2) {
-                    var v10 = new Array(vertices[i], vertices[i + 1], vertices[i + 2]);
-                    var v11 = new Array(vertices[((Row + 1) * Sa_Num + Column) * 3], vertices[((Row + 1) * Sa_Num + Column) * 3 + 1], vertices[((Row + 1) * Sa_Num + Column) * 3 + 2]);
-                    var v12 = new Array(vertices[i - 3], vertices[(i - 3) + 1], vertices[(i - 3) + 2]);
-                    N4 = normFace(v10, v11, v12);
+                    let v10 = new Array(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2]);
+                    let v11 = new Array(this.vertices[((Row + 1) * Sa_Num + Column) * 3], this.vertices[((Row + 1) * Sa_Num + Column) * 3 + 1], this.vertices[((Row + 1) * Sa_Num + Column) * 3 + 2]);
+                    let v12 = new Array(this.vertices[i - 3], this.vertices[(i - 3) + 1], this.vertices[(i - 3) + 2]);
+                    N4 = this.normFace(v10, v11, v12);
                 }
                 else {
                     N4 = null; // ??????????????
                 }
-                N_Mid = Vector_Median(N1, N2);
-                N_Mid = Vector_Median(N_Mid, N3);
-                N_Mid = Vector_Median(N_Mid, N4);
+                N_Mid = this.Vector_Median(N1, N2);
+                N_Mid = this.Vector_Median(N_Mid, N3);
+                N_Mid = this.Vector_Median(N_Mid, N4);
 
                 if (N1 == null)
                     N1 = new Array(0, 0, 0);
@@ -701,18 +753,18 @@ function animate() {
                 if (N_Mid == null)
                     N_Mid = new Array(0, 0, 0);
                 //alert(N_Mid);
-                normals[i] = N_Mid[0];
-                normals[i + 1] = N_Mid[1];
-                normals[i + 2] = N_Mid[2];
+                this.normals[i] = N_Mid[0];
+                this.normals[i + 1] = N_Mid[1];
+                this.normals[i + 2] = N_Mid[2];
 
-                //alert(normals);
+                //alert(this.normals);
             }
         }
     }
     //}
-    elapsed++;
-    UpdateBuffers();
-    //rPyramid += (90 * elapsed) / 1000.0;
+    this.elapsed++;
+    this.UpdateBuffers();
+    //rPyramid += (90 * this.elapsed) / 1000.0;
     //rCube -= (75 * elapsed) / 1000.0;
     //}
     //lastTime = timeNow;
@@ -729,17 +781,17 @@ function waves(t) {
     opVerts = oceanPlane.vertices;
 
 
-    var len = opVerts.length;
-    for (var i = 0; i < len; i++) {
+    let len = opVerts.length;
+    for (let i = 0; i < len; i++) {
         opVerts[i].z = this.waveA(opVerts[i].x, opVerts[i].y, t);
     }
 
 
-    var waveVar;
-    var colorWave;
+    let wavelet;
+    let colorWave;
 
     //small waves
-    for (var j = 0, l = this.oceanPlane.vertices.length; j < l; j++) {
+    for (let j = 0, l = this.oceanPlane.vertices.length; j < l; j++) {
         oceanPlane.vertices[j].z = oceanPlane.vertices[j].z + waveB(this.oceanPlane.vertices[j].x, oceanPlane.vertices[j].z, t);
     }
 
@@ -750,98 +802,96 @@ function waves(t) {
 
 
 
-function waveA(x, y, t) {
-    return Math.sin((x / 20) * waveOffsetA + (t / waveSpeedA)) * Math.cos((y / 20) * waveOffsetA + (t / waveSpeedA)) * waveHeightA;
+private waveA(x, y, t) {
+    return Math.sin((x / 20) * this.waveOffsetA + (t / this.waveSpeedA)) * Math.cos((y / 20) * this.waveOffsetA + (t / this.waveSpeedA)) * this.waveHeightA;
 }
 
-function waveB(x, y, t) {
-    return Math.sin((x / 2) * waveOffsetB + (t / waveSpeedB)) * Math.cos((y / 2) * waveOffsetB + (t / waveSpeedB)) * waveHeightB;
+private waveB(x, y, t) {
+    return Math.sin((x / 2) * this.waveOffsetB + (t / this.waveSpeedB)) * Math.cos((y / 2) * this.waveOffsetB + (t / this.waveSpeedB)) * this.waveHeightB;
 }
 
-var lastTime = 0;
-
-
-function tick() {
-    if(anim){
+private tick() {
+    debugger;
+    if (this.anim) {
         //requestAnimFrame(tick);
-        window.requestAnimationFrame(tick);
+        window.requestAnimationFrame(() => this.tick());
     }
-    animate();
-    drawScene();
+    this.animate();
+    this.drawScene();
 }
 
 
-function UpdateBuffers() {
+private UpdateBuffers() {
 
 
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, VertexPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.VertexPositionBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.vertices), this.gl.STREAM_DRAW);
 
     //gl.bindBuffer(gl.ARRAY_BUFFER, FacesVertexNormalBuffer);
     //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.DYNAMIC_DRAW);
 
 }
 
-function Surface_Strip() {
+private Surface_Strip() {
     this.vertices = new Array();
     this.Tr_colors = new Array();
     this.Tr_indices = new Array();
     this.normals = new Array();
 }
 
-function init_Surface_Geom() {
-    var end_for = 5;//5
-    var step_for = 0.02;
-    var step = 0.02;
-    var RS_Count = parseInt(end_for / step_for) + 1;
-    var DDist = 0;
-    var m = 0;
-    var n = 0;
+private init_Surface_Geom() {
+    let end_for = 5;//5
+    let step_for = 0.02;
+    let step = 0.02;
+    let RS_Count = parseInt((end_for / step_for).toString()) + 1;
+    let DDist = 0;
+    let m = 0;
+    let n = 0;
 
-    var ACC_Len = RS_3D[0].length;
-    var Sa_Num = ACC_Len;
+    let ACC_Len = this.RS_3D[0].length;
+    let Sa_Num = ACC_Len;
 
-    //var a = 3000 / (ACC_Len - 1) + 1;
-    //var b = (RS_Count-1)/a;
+    //let a = 3000 / (ACC_Len - 1) + 1;
+    //let b = (RS_Count-1)/a;
 
-    for (var i = 0; i < RS_3D.length; i++) {
+    for (let i = 0; i < this.RS_3D.length; i++) {
         m++;
-        //var ACC_Len = RS_3D[i].length;
+        //let ACC_Len = RS_3D[i].length;
 
-        for (var f = 0; f < ACC_Len; f++) {
+        for (let f = 0; f < ACC_Len; f++) {
 
-            var Geom = true;
+            let Geom = true;
 
             if (Geom) {
 
-                //var R1 = 0;
-                //var G1 = 1;
-                //var B1 = 0;
+                //let R1 = 0;
+                //let G1 = 1;
+                //let B1 = 0;
 
-                vertices[(f + (m - 1) * ACC_Len) * 3 + 0] = DDist;
-                vertices[(f + (m - 1) * ACC_Len) * 3 + 1] = RS_3D[i][f];
-                vertices[(f + (m - 1) * ACC_Len) * 3 + 2] = (f * step);
+                this.vertices[(f + (m - 1) * ACC_Len) * 3 + 0] = DDist;
+                this.vertices[(f + (m - 1) * ACC_Len) * 3 + 1] = this.RS_3D[i][f];
+                this.vertices[(f + (m - 1) * ACC_Len) * 3 + 2] = (f * step);
 
-                Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 0] = 0;
-                Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 1] = 1;
-                Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 2] = 0;
-                Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 3] = 1;
+                this.Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 0] = 0;
+                this.Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 1] = 1;
+                this.Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 2] = 0;
+                this.Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 3] = 1;
 
                 if (m < RS_Count) {
                     if (f < ACC_Len - 1) {
 
-                        Tr_indices[n] = f + (m - 1) * ACC_Len;
+                        this.Tr_indices[n] = f + (m - 1) * ACC_Len;
                         n++;
-                        Tr_indices[n] = (f + 1) + (m - 1) * ACC_Len;
+                        this.Tr_indices[n] = (f + 1) + (m - 1) * ACC_Len;
                         n++;
-                        Tr_indices[n] = f + m * ACC_Len;
+                        this.Tr_indices[n] = f + m * ACC_Len;
                         n++;
-                        Tr_indices[n] = f + m * ACC_Len;
+                        this.Tr_indices[n] = f + m * ACC_Len;
                         n++;
-                        Tr_indices[n] = (f + 1) + (m - 1) * ACC_Len;
+                        this.Tr_indices[n] = (f + 1) + (m - 1) * ACC_Len;
                         n++;
-                        Tr_indices[n] = (f + 1) + m * ACC_Len;
+                        this.Tr_indices[n] = (f + 1) + m * ACC_Len;
                         n++;
                     }
                 }
@@ -851,60 +901,60 @@ function init_Surface_Geom() {
     }
 
 
-    var N1 = new Array();
-    var N2 = new Array();
-    var N3 = new Array();
-    var N4 = new Array();
+    let N1 = new Array();
+    let N2 = new Array();
+    let N3 = new Array();
+    let N4 = new Array();
 
-    var N_Mid = new Array();
+    let N_Mid = new Array();
 
-    for (var i = 0; i < vertices.length; i = i + 3) {
+    for (let i = 0; i < this.vertices.length; i = i + 3) {
 
-        var Row = parseInt(i / 3 / Sa_Num); //first is 0
-        var Column = parseInt(i / 3 - Row * Sa_Num); //first is 0
+        let Row = parseInt((i / 3 / Sa_Num).toString()); //first is 0
+        let Column = parseInt((i / 3 - Row * Sa_Num).toString()); //first is 0
 
         if (Column < Sa_Num - 2 && Row < RS_Count - 2) {
-            var v1 = new Array(vertices[i], vertices[i + 1], vertices[i + 2]);
-            var v2 = new Array(vertices[i + 3], vertices[(i + 3) + 1], vertices[(i + 3) + 2]);
-            var v3 = new Array(vertices[((Row + 1) * Sa_Num + Column) * 3], vertices[((Row + 1) * Sa_Num + Column) * 3 + 1], vertices[((Row + 1) * Sa_Num + Column) * 3 + 2]);
-            N1 = normFace(v1, v2, v3);
+            let v1 = new Array(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2]);
+            let v2 = new Array(this.vertices[i + 3], this.vertices[(i + 3) + 1], this.vertices[(i + 3) + 2]);
+            let v3 = new Array(this.vertices[((Row + 1) * Sa_Num + Column) * 3], this.vertices[((Row + 1) * Sa_Num + Column) * 3 + 1], this.vertices[((Row + 1) * Sa_Num + Column) * 3 + 2]);
+            N1 = this.normFace(v1, v2, v3);
         }
         else {
             N1 = null; // ??????????????
         }
 
         if (Column < Sa_Num - 2 && Row > 0) {
-            var v4 = new Array(vertices[i], vertices[i + 1], vertices[i + 2]);
-            var v5 = new Array(vertices[((Row - 1) * Sa_Num + Column) * 3], vertices[((Row - 1) * Sa_Num + Column) * 3 + 1], vertices[((Row - 1) * Sa_Num + Column) * 3 + 2]);
-            var v6 = new Array(vertices[i + 3], vertices[(i + 3) + 1], vertices[(i + 3) + 2]);
-            N2 = normFace(v4, v5, v6);
+            let v4 = new Array(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2]);
+            let v5 = new Array(this.vertices[((Row - 1) * Sa_Num + Column) * 3], this.vertices[((Row - 1) * Sa_Num + Column) * 3 + 1], this.vertices[((Row - 1) * Sa_Num + Column) * 3 + 2]);
+            let v6 = new Array(this.vertices[i + 3], this.vertices[(i + 3) + 1], this.vertices[(i + 3) + 2]);
+            N2 = this.normFace(v4, v5, v6);
         }
         else {
             N2 = null; // ??????????????
         }
 
         if (Column > 0 && Row > 0) {
-            var v7 = new Array(vertices[i], vertices[i + 1], vertices[i + 2]);
-            var v8 = new Array(vertices[i - 3], vertices[(i - 3) + 1], vertices[(i - 3) + 2]);
-            var v9 = new Array(vertices[((Row - 1) * Sa_Num + Column) * 3], vertices[((Row - 1) * Sa_Num + Column) * 3 + 1], vertices[((Row - 1) * Sa_Num + Column) * 3 + 2]);
-            N3 = normFace(v7, v8, v9);
+            let v7 = new Array(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2]);
+            let v8 = new Array(this.vertices[i - 3], this.vertices[(i - 3) + 1], this.vertices[(i - 3) + 2]);
+            let v9 = new Array(this.vertices[((Row - 1) * Sa_Num + Column) * 3], this.vertices[((Row - 1) * Sa_Num + Column) * 3 + 1], this.vertices[((Row - 1) * Sa_Num + Column) * 3 + 2]);
+            N3 = this.normFace(v7, v8, v9);
         }
         else {
             N3 = null; // ??????????????
         }
 
         if (Column > 0 && Row < RS_Count - 2) {
-            var v10 = new Array(vertices[i], vertices[i + 1], vertices[i + 2]);
-            var v11 = new Array(vertices[((Row + 1) * Sa_Num + Column) * 3], vertices[((Row + 1) * Sa_Num + Column) * 3 + 1], vertices[((Row + 1) * Sa_Num + Column) * 3 + 2]);
-            var v12 = new Array(vertices[i - 3], vertices[(i - 3) + 1], vertices[(i - 3) + 2]);
-            N4 = normFace(v10, v11, v12);
+            let v10 = new Array(this.vertices[i], this.vertices[i + 1], this.vertices[i + 2]);
+            let v11 = new Array(this.vertices[((Row + 1) * Sa_Num + Column) * 3], this.vertices[((Row + 1) * Sa_Num + Column) * 3 + 1], this.vertices[((Row + 1) * Sa_Num + Column) * 3 + 2]);
+            let v12 = new Array(this.vertices[i - 3], this.vertices[(i - 3) + 1], this.vertices[(i - 3) + 2]);
+            N4 = this.normFace(v10, v11, v12);
         }
         else {
             N4 = null; // ??????????????
         }
-        N_Mid = Vector_Median(N1, N2);
-        N_Mid = Vector_Median(N_Mid, N3);
-        N_Mid = Vector_Median(N_Mid, N4);
+        N_Mid = this.Vector_Median(N1, N2);
+        N_Mid = this.Vector_Median(N_Mid, N3);
+        N_Mid = this.Vector_Median(N_Mid, N4);
 
         if (N1 == null)
             N1 = new Array(0, 0, 0);
@@ -917,142 +967,140 @@ function init_Surface_Geom() {
         if (N_Mid == null)
             N_Mid = new Array(0, 0, 0);
         //alert(N_Mid);
-        normals[i] = N_Mid[0];
-        normals[i + 1] = N_Mid[1];
-        normals[i + 2] = N_Mid[2];
+        this.normals[i] = N_Mid[0];
+        this.normals[i + 1] = N_Mid[1];
+        this.normals[i + 2] = N_Mid[2];
 
 
 
     }
 }
 
-function initBuffers() {
+private initBuffers() {
 
-    VertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, VertexPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
-    VertexPositionBuffer.itemSize = 3;
-    VertexPositionBuffer.numItems = vertices.length / 3;
+    this.VertexPositionBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.VertexPositionBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.vertices), this.gl.STREAM_DRAW);
+    this.VertexPositionBuffer.itemSize = 3;
+    this.VertexPositionBuffer.numItems = this.vertices.length / 3;
 
 
-    FacesVertexNormalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, FacesVertexNormalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STREAM_DRAW);
-    FacesVertexNormalBuffer.itemSize = 3;
-    FacesVertexNormalBuffer.numItems = normals.length / 3;
+    this.FacesVertexNormalBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexNormalBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.normals), this.gl.STREAM_DRAW);
+    this.FacesVertexNormalBuffer.itemSize = 3;
+    this.FacesVertexNormalBuffer.numItems = this.normals.length / 3;
 
-    FacesVertexColorBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, FacesVertexColorBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(Tr_colors), gl.STATIC_DRAW);
-    FacesVertexColorBuffer.itemSize = 4;
-    FacesVertexColorBuffer.numItems = Tr_colors.length / 4;
+    this.FacesVertexColorBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexColorBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.Tr_colors), this.gl.STATIC_DRAW);
+    this.FacesVertexColorBuffer.itemSize = 4;
+    this.FacesVertexColorBuffer.numItems = this.Tr_colors.length / 4;
 
-    FacesVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, FacesVertexIndexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(Tr_indices), gl.STATIC_DRAW);
-    FacesVertexIndexBuffer.itemSize = 1;
-    FacesVertexIndexBuffer.numItems = Tr_indices.length;
-    //alert(Tr_indices.length);
-    if (anim == true) {
-        LinesVertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, LinesVertexIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(L_indices), gl.STATIC_DRAW);
-        LinesVertexIndexBuffer.itemSize = 1;
-        LinesVertexIndexBuffer.numItems = L_indices.length;
+    this.FacesVertexIndexBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.FacesVertexIndexBuffer);
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.Tr_indices), this.gl.STATIC_DRAW);
+    this.FacesVertexIndexBuffer.itemSize = 1;
+    this.FacesVertexIndexBuffer.numItems = this.Tr_indices.length;
+    //alert(this.Tr_indices.length);
+    if (this.anim == true) {
+        this.LinesVertexIndexBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.LinesVertexIndexBuffer);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.L_indices), this.gl.STATIC_DRAW);
+        this.LinesVertexIndexBuffer.itemSize = 1;
+        this.LinesVertexIndexBuffer.numItems = this.L_indices.length;
     }
 
     // --------------------------
 
 }
-var rJoint = 0;
-
-var RI, ZI, TI;
-
-function drawScene() {
 
 
-    show_faces = false;
+private drawScene() {
 
-    if (Current_View.Rotate_Incr == 0)
-        RI = 0.5;
+
+    this.show_faces = false;
+
+    if (this.Current_View.Rotate_Incr == 0)
+        this.RI = 0.5;
     else
-        RI = Current_View.Rotate_Incr;
+        this.RI = this.Current_View.Rotate_Incr;
 
-    if (Current_View.Zoom_Incr == 0)
-        ZI = 0.002;
+    if (this.Current_View.Zoom_Incr == 0)
+        this.ZI = 0.002;
     else
-        ZI = Current_View.Zoom_Incr;
+        this.ZI = this.Current_View.Zoom_Incr;
 
-    if (Current_View.Translate_Incr == 0)
-        TI = 0.0002;
+    if (this.Current_View.Translate_Incr == 0)
+        this.TI = 0.0002;
     else
-        TI = Current_View.Translate_Incr;
+        this.TI = this.Current_View.Translate_Incr;
 
-    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(pMatrix, 45, gl.viewportWidth / gl.viewportHeight, 0.1, 100000.0);
+    mat4.perspective(this.pMatrix, 45, this.gl.viewportWidth / this.gl.viewportHeight, 0.1, 100000.0);
 
-    mat4.identity(mvMatrix);
+    mat4.identity(this.mvMatrix);
 
-    mat4.translate(mvMatrix, mvMatrix, [(Current_View.DistX * TI + Current_View.PowerDX_1 * ZI * 1.05 / 10), (Current_View.DistY * TI + Current_View.PowerDY_1 * ZI * 1.05 / 10), (Current_View.DistZ + Current_View.PowerS * ZI)]);
-    mat4.rotate(mvMatrix, mvMatrix, degToRad(Current_View.xDeg * Current_View.Rotate_Incr), [1, 0, 0]);
-    mat4.rotate(mvMatrix, mvMatrix, degToRad(Current_View.yDeg * Current_View.Rotate_Incr), [0, 1, 0]);
+    mat4.translate(this.mvMatrix, this.mvMatrix, [(this.Current_View.DistX * this.TI + this.Current_View.PowerDX_1 * this.ZI * 1.05 / 10), (this.Current_View.DistY * this.TI + this.Current_View.PowerDY_1 * this.ZI * 1.05 / 10), (this.Current_View.DistZ + this.Current_View.PowerS * this.ZI)]);
+    mat4.rotate(this.mvMatrix, this.mvMatrix, this.degToRad(this.Current_View.xDeg * this.Current_View.Rotate_Incr), [1, 0, 0]);
+    mat4.rotate(this.mvMatrix, this.mvMatrix, this.degToRad(this.Current_View.yDeg * this.Current_View.Rotate_Incr), [0, 1, 0]);
 
 
-    var lighting = true;
-    gl.uniform1i(shaderProgram.useLightingUniform, lighting);
+    let lighting = true;
+    this.gl.uniform1i(this.shaderProgram.useLightingUniform, lighting);
     if (lighting) {
 
-        gl.uniform3f(shaderProgram.ambientColorUniform, parseFloat(0.3), parseFloat(0.3), parseFloat(0.3));
+        this.gl.uniform3f(this.shaderProgram.ambientColorUniform, 0.3, 0.3, 0.3);
 
-        var lightingDirection = [parseFloat(0), parseFloat(0), parseFloat(-1)];
-        var adjustedLD = vec3.create();
+        let lightingDirection = [0, 0, -1];
+        let adjustedLD = vec3.create();
         vec3.normalize(lightingDirection, adjustedLD);
         vec3.scale(adjustedLD, -1);
-        gl.uniform3fv(shaderProgram.lightingDirectionUniform, adjustedLD);
+        this.gl.uniform3fv(this.shaderProgram.lightingDirectionUniform, adjustedLD);
 
-        gl.uniform3f(shaderProgram.directionalColorUniform, parseFloat(0.6), parseFloat(0.6), parseFloat(0.6));
+        this.gl.uniform3f(this.shaderProgram.directionalColorUniform, 0.6, 0.6, 0.6);
 
     }
 
-    gl.disable(gl.BLEND);
-    gl.uniform1f(shaderProgram.alphaUniform, 1)
-    gl.enable(gl.DEPTH_TEST);
+    this.gl.disable(this.gl.BLEND);
+    this.gl.uniform1f(this.shaderProgram.alphaUniform, 1)
+    this.gl.enable(this.gl.DEPTH_TEST);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, VertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.VertexPositionBuffer);
+    this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.VertexPositionBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, FacesVertexNormalBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, FacesVertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexNormalBuffer);
+    this.gl.vertexAttribPointer(this.shaderProgram.vertexNormalAttribute, this.FacesVertexNormalBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, FacesVertexColorBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, FacesVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexColorBuffer);
+    this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.FacesVertexColorBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
-    if (anim == true) {
-        if (show_faces) {
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, FacesVertexIndexBuffer);
-            setMatrixUniforms();
+    if (this.anim == true) {
+        if (this.show_faces) {
+            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.FacesVertexIndexBuffer);
+            this.setMatrixUniforms();
             //gl.drawArrays(gl.TRIANGLES, 0, FacesVertexIndexBuffer.numItems);
-            gl.drawElements(gl.TRIANGLES, FacesVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+            this.gl.drawElements(this.gl.TRIANGLES, this.FacesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
         }
     }
     else {
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, FacesVertexIndexBuffer);
-        setMatrixUniforms();
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.FacesVertexIndexBuffer);
+        this.setMatrixUniforms();
         //gl.drawArrays(gl.TRIANGLES, 0, FacesVertexIndexBuffer.numItems);
-        gl.drawElements(gl.TRIANGLES, FacesVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+        this.gl.drawElements(this.gl.TRIANGLES, this.FacesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
         //alert(FacesVertexIndexBuffer.numItems);
 
     }
     //gl.bindBuffer(gl.ARRAY_BUFFER, LinesVertexColorBuffer);
     //gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, LinesVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-    if (anim == true) {
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, LinesVertexIndexBuffer);
-        setMatrixUniforms();
-        gl.drawElements(gl.LINES, LinesVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-        var a = 0;
+    if (this.anim == true) {
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.LinesVertexIndexBuffer);
+        this.setMatrixUniforms();
+        this.gl.drawElements(this.gl.LINES, this.LinesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
+        let a = 0;
     }
     //gl.lineWidth(3.0);
     // ------------------------------------------------  Draw Bolts
@@ -1069,140 +1117,132 @@ function drawScene() {
     */
 
 }
-var canv_Width;
-var canv_Height;
-function resizeCanvas() {
-    //var canvas = document.getElementById("worldmap_canvas1");
-    canv_Width = _canvas.clientWidth;
-    canv_Height = _canvas.clientHeight
+
+private resizeCanvas() {
+    //let canvas = document.getElementById("worldmap_canvas1");
+    this.canv_Width = this._canvas.clientWidth;
+    this.canv_Height = this._canvas.clientHeight
     // only change the size of the canvas if the size it's being displayed
     // has changed.
-    if (_canvas.width != _canvas.clientWidth ||
-    _canvas.height != _canvas.clientHeight) {
+    if (this._canvas.width != this._canvas.clientWidth ||
+        this._canvas.height != this._canvas.clientHeight) {
         // Change the size of the canvas to match the size it's being displayed
-        _canvas.width = _canvas.clientWidth;
-        _canvas.height = _canvas.clientHeight;
+        this._canvas.width = this._canvas.clientWidth;
+        this._canvas.height = this._canvas.clientHeight;
     }
 
-    Mid_X = _canvas.width / 2.0;
-    Mid_Y = _canvas.height / 2.0;
+    this.Mid_X = this._canvas.width / 2.0;
+    this.Mid_Y = this._canvas.height / 2.0;
 
     try {
-        gl.viewportWidth = _canvas.width;
-        gl.viewportHeight = _canvas.height;
-        drawScene();
+        this.gl.viewportWidth = this._canvas.width;
+        this.gl.viewportHeight = this._canvas.height;
+        this.drawScene();
     }
     catch (e) { }
 
 }
-var show_faces;
-var SelectMode;
-var anim;
+private show_faces;
+private SelectMode;
+private anim;
 
-export function webGLStop(){
-    anim = false;
+public webGLStop() {
+    this.anim = false;
 }
 
-export function webGLStart(canvas, ANIME) {
-    initGL(canvas);
-    anim = ANIME;
+private webGLStart(canvas, ANIME) {
+    this.initGL(canvas);
+    this.anim = ANIME;
 
-    elapsed = 0;
-    show_faces = false;
-    SelectMode = false;
+    this.elapsed = 0;
+    this.show_faces = false;
+    this.SelectMode = false;
 
-    Load_Current_View();
+    this.Load_Current_View();
 
-    //var canvas = document.getElementById("worldmap_canvas1");
-    resizeCanvas();
+    //let canvas = document.getElementById("worldmap_canvas1");
+    this.resizeCanvas();
 
-    initShaders();
+    this.initShaders();
 
 
-    var i, f;
-    for(i = 0; i<10800;i++){
-        vertices.push(0);
-        normals.push(0);
+    let i, f;
+    for (i = 0; i < 10800; i++) {
+        this.vertices.push(0);
+        this.normals.push(0);
     }
 
-    for(i = 0; i<14400;i++){
-        Tr_colors.push(0);
+    for (i = 0; i < 14400; i++) {
+        this.Tr_colors.push(0);
     }
 
-    if (vertices.length == 0) {
+    if (this.vertices.length == 0) {
 
-        init_Surface_Geom();
+        this.init_Surface_Geom();
     }
 
-    for(i = 0; i<20886;i++){
-        Tr_indices.push(0);
+    for (i = 0; i < 20886; i++) {
+        this.Tr_indices.push(0);
     }
 
-    for(i = 0; i<14160;i++){
-        L_indices.push(0);
+    for (i = 0; i < 14160; i++) {
+        this.L_indices.push(0);
     }
 
-    var m = 0, n = 0, n_L = 0, n_col=0;
-    var DDist = -60;
-    var step = 2;
+    let m = 0, n = 0, n_L = 0, n_col = 0;
+    let DDist = -60;
+    let step = 2;
 
-    for (i = 0; i < 60; i ++)
-    {
+    for (i = 0; i < 60; i++) {
         m++;
-        for (f = 0; f < 60; f++)
-        {
-            vertices[(f + (m - 1) * 60) * 3 + 0] = DDist;
-            vertices[(f + (m - 1) * 60) * 3 + 1] = 0;
-            vertices[(f + (m - 1) * 60) * 3 + 2] = (f * step - 60);
+        for (f = 0; f < 60; f++) {
+            this.vertices[(f + (m - 1) * 60) * 3 + 0] = DDist;
+            this.vertices[(f + (m - 1) * 60) * 3 + 1] = 0;
+            this.vertices[(f + (m - 1) * 60) * 3 + 2] = (f * step - 60);
 
-            vertices[(f + (m - 1) * 60) * 3 + 0] = DDist;
-            vertices[(f + (m - 1) * 60) * 3 + 1] = 0;
-            vertices[(f + (m - 1) * 60) * 3 + 2] = (f * step - 60);
+            this.vertices[(f + (m - 1) * 60) * 3 + 0] = DDist;
+            this.vertices[(f + (m - 1) * 60) * 3 + 1] = 0;
+            this.vertices[(f + (m - 1) * 60) * 3 + 2] = (f * step - 60);
 
-            Tr_colors[n_col++] = 0;
-            Tr_colors[n_col++] = 1;
-            Tr_colors[n_col++] = 0;
-            Tr_colors[n_col++] = 0.9;
-            if (m < 60)
-            {
-                if (f < 60 - 1)
-                {
-                    Tr_indices[n] = f + (m - 1) * 60;
-                    L_indices[n_L] = f + (m - 1) * 60;
+            this.Tr_colors[n_col++] = 0;
+            this.Tr_colors[n_col++] = 1;
+            this.Tr_colors[n_col++] = 0;
+            this.Tr_colors[n_col++] = 0.9;
+            if (m < 60) {
+                if (f < 60 - 1) {
+                    this.Tr_indices[n] = f + (m - 1) * 60;
+                    this.L_indices[n_L] = f + (m - 1) * 60;
                     n++;
                     n_L++;
-                    Tr_indices[n] = (f + 1) + (m - 1) * 60;
-                    L_indices[n_L] = (f + 1) + (m - 1) * 60;
+                    this.Tr_indices[n] = (f + 1) + (m - 1) * 60;
+                    this.L_indices[n_L] = (f + 1) + (m - 1) * 60;
                     n++;
                     n_L++;
-                    Tr_indices[n] = f + m * 60;
+                    this.Tr_indices[n] = f + m * 60;
                     n++;
-                    Tr_indices[n] = f + m * 60;
+                    this.Tr_indices[n] = f + m * 60;
                     n++;
-                    Tr_indices[n] = (f + 1) + (m - 1) * 60;
-                    L_indices[n_L] = (f + 1) + (m - 1) * 60;
+                    this.Tr_indices[n] = (f + 1) + (m - 1) * 60;
+                    this.L_indices[n_L] = (f + 1) + (m - 1) * 60;
                     n++;
                     n_L++;
-                    Tr_indices[n] = (f + 1) + m * 60;
-                    L_indices[n_L] = (f + 1) + m * 60;
+                    this.Tr_indices[n] = (f + 1) + m * 60;
+                    this.L_indices[n_L] = (f + 1) + m * 60;
                     n++;
                     n_L++;
                 }
-                else
-                {
-                    L_indices[n_L] = (m - 1) * 60;
+                else {
+                    this.L_indices[n_L] = (m - 1) * 60;
                     n_L++;
-                    L_indices[n_L] = m * 60;
+                    this.L_indices[n_L] = m * 60;
                     n_L++;
                 }
             }
-            else
-            {
-                if (f < 60 - 1)
-                {
-                    L_indices[n_L] = (f + 1) + (m - 1) * 60;
+            else {
+                if (f < 60 - 1) {
+                    this.L_indices[n_L] = (f + 1) + (m - 1) * 60;
                     n_L++;
-                    L_indices[n_L] = f + (m - 1) * 60;
+                    this.L_indices[n_L] = f + (m - 1) * 60;
                     n_L++;
                 }
             }
@@ -1210,62 +1250,60 @@ export function webGLStart(canvas, ANIME) {
         DDist = DDist + step;
     }
 
-    var max = 0;
-    for(i = 0; i<14160;i++){
-        if(L_indices[i]>max) max = L_indices[i];
+    let max = 0;
+    for (i = 0; i < 14160; i++) {
+        if (this.L_indices[i] > max) max = this.L_indices[i];
     }
 
 
-    initBuffers(); // <---------- error here!
+    this.initBuffers(); // <---------- error here!
 
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK);
+    this.gl.enable(this.gl.CULL_FACE);
+    this.gl.cullFace(this.gl.BACK);
 
-    gl.clearColor(0, 0, 0, 1.0);
+    this.gl.clearColor(0, 0, 0, 1.0);
     //gl.clearColor(0.67843, 0.84706, 0.90196, 1.0);
-    gl.enable(gl.DEPTH_TEST);
+    this.gl.enable(this.gl.DEPTH_TEST);
 
-    gl.depthFunc(gl.LEQUAL);
+    this.gl.depthFunc(this.gl.LEQUAL);
 
-    gl.hint(gl.PERSPECTIVE_CORRECTION_HINT, gl.NICEST);
+    this.gl.hint(this.gl.PERSPECTIVE_CORRECTION_HINT, this.gl.NICEST);
 
-    gl.polygonOffset(2, 1);
+    this.gl.polygonOffset(2, 1);
 
-    Active_Part = "";
-    Active_Assembly = "";
-    Selected_Part = "";
-    Selected_Assembly = "";
+    this.Active_Part = "";
+    this.Active_Assembly = "";
+    this.Selected_Part = "";
+    this.Selected_Assembly = "";
 
+    // try {
+    //     canvas.addEventListener('DOMMouseScroll', wheel, false);
+    // }
+    // catch (e) {
+    // }
     try {
-        canvas.addEventListener('DOMMouseScroll', wheel, false);
+        canvas.addEventListener("mousewheel", (e) => this.MouseWheelHandler(e), false);
     }
     catch (e) {
     }
-    try {
-        canvas.addEventListener("mousewheel", MouseWheelHandler, false);
-    }
-    catch (e) {
-    }
 
-    window.onresize = function () { resizeCanvas() };
+    window.onresize = () => this.resizeCanvas();
 
-    canvas.onmousedown = handleMouseDown;
-    canvas.onmousemove = handleMouseMove;
+    canvas.onmousedown = e => this.handleMouseDown(e);
+    canvas.onmousemove = e => this.handleMouseMove(e);
 
 
     if (ANIME == true) {
-        tick();
+        this.tick();
     }
     else {
-        drawScene();
+        this.drawScene();
     }
 }
 
-
-var Current_View;
-function Load_Current_View() {
+private Load_Current_View() {
     try {
-        Current_View = {
+        this.Current_View = {
             DistX: 756,
             DistY: -97,
             DistZ: -35,
@@ -1282,121 +1320,122 @@ function Load_Current_View() {
     catch (e) {
     }
 }
-var Epsilon = 0.000001;
 
-function _Cross(dest, v1, v2) {
+private _Cross(dest, v1, v2) {
     dest.X = v1[1] * v2[2] - v1[2] * v2[1];
     dest.Y = v1[2] * v2[0] - v1[0] * v2[2];
     dest.Z = v1[0] * v2[1] - v1[1] * v2[0];
 }
 
-function _Cross1(dest, v1, v2) {
+private _Cross1(dest, v1, v2) {
     dest.X = v1.Y * v2.Z - v1.Z * v2.Y;
     dest.Y = v1.Z * v2.X - v1.X * v2.Z;
     dest.Z = v1.X * v2.Y - v1.Y * v2.X;
 }
 
-function _Cross2(dest, v1, v2) {
+private _Cross2(dest, v1, v2) {
     dest.X = v1[1] * v2.Z - v1[2] * v2.Y;
     dest.Y = v1[2] * v2.X - v1[0] * v2.Z;
     dest.Z = v1[0] * v2.Y - v1[1] * v2.X;
 }
 
-function _DOT(v1, v2) {
+private _DOT(v1, v2) {
     return v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z;
 }
-function _DOT2(v1, v2) {
+private _DOT2(v1, v2) {
     return v1[0] * v2.X + v1[1] * v2.Y + v1[2] * v2.Z;
 }
-function _SUB(dest, v1, v2) {
+private _SUB(dest, v1, v2) {
     dest.X = v1[0] - v2[0];
     dest.Y = v1[1] - v2[1];
     dest.Z = v1[2] - v2[2];
 
 }
 
-function Intersect_Triangle(orig, dir, vert0, vert1, vert2, TEST_CULL, Hit_Obj) {
+private Intersect_Triangle(orig, dir, vert0, vert1, vert2, TEST_CULL, Hit_Obj) {
 
-    var edge1 = { X: 0, Y: 0, Z: 0 }
-    var edge2 = { X: 0, Y: 0, Z: 0 }
-    var tvec = { X: 0, Y: 0, Z: 0 }
-    var pvec = { X: 0, Y: 0, Z: 0 }
-    var qvec = { X: 0, Y: 0, Z: 0 }
-    var det, inv_det;
+    let edge1 = { X: 0, Y: 0, Z: 0 }
+    let edge2 = { X: 0, Y: 0, Z: 0 }
+    let tvec = { X: 0, Y: 0, Z: 0 }
+    let pvec = { X: 0, Y: 0, Z: 0 }
+    let qvec = { X: 0, Y: 0, Z: 0 }
+    let det, inv_det;
 
-    _SUB(edge1, vert1, vert0);
-    _SUB(edge2, vert2, vert0);
+    this._SUB(edge1, vert1, vert0);
+    this._SUB(edge2, vert2, vert0);
 
-    _Cross2(pvec, dir, edge2);
+    this._Cross2(pvec, dir, edge2);
 
-    det = _DOT(edge1, pvec);
+    det = this._DOT(edge1, pvec);
 
     if (TEST_CULL) {
 
-        if (det < Epsilon)
+        if (det < this.Epsilon)
             return 0;
 
-        _SUB(tvec, orig, vert0);
+        this._SUB(tvec, orig, vert0);
 
-        Hit_Obj.u = _DOT(tvec, pvec);
+        Hit_Obj.u = this._DOT(tvec, pvec);
         if (Hit_Obj.u < 0 || Hit_Obj.u > det)
             return 0;
 
-        _Cross1(qvec, tvec, edge1);
+        this._Cross1(qvec, tvec, edge1);
 
-        Hit_Obj.v = _DOT2(dir, qvec);
+        Hit_Obj.v = this._DOT2(dir, qvec);
         if (Hit_Obj.v < 0 || Hit_Obj.u + Hit_Obj.v > det)
             return 0;
 
-        Hit_Obj.t = _DOT(edge2, qvec);
+        Hit_Obj.t = this._DOT(edge2, qvec);
         inv_det = 1 / det;
         Hit_Obj.t *= inv_det;
         Hit_Obj.u *= inv_det;
         Hit_Obj.v *= inv_det;
     }
     else {
-        if (det > -Epsilon && det < Epsilon)
+        if (det > -this.Epsilon && det < this.Epsilon)
             return 0;
 
         inv_det = 1 / det;
-        _SUB(tvec, orig, vert0);
+        this._SUB(tvec, orig, vert0);
 
-        Hit_Obj.u = _DOT(tvec, pvec) * inv_det;
+        Hit_Obj.u = this._DOT(tvec, pvec) * inv_det;
 
         if (Hit_Obj.u < 0 || Hit_Obj.u > 1)
             return 0;
 
 
-        _Cross1(qvec, tvec, edge1);
-        Hit_Obj.v = _DOT2(dir, qvec) * inv_det;
+        this._Cross1(qvec, tvec, edge1);
+        Hit_Obj.v = this._DOT2(dir, qvec) * inv_det;
 
         if (Hit_Obj.v < 0 || Hit_Obj.u + Hit_Obj.v > 1)
             return 0;
 
-        Hit_Obj.t = _DOT(edge2, qvec) * inv_det;
+        Hit_Obj.t = this._DOT(edge2, qvec) * inv_det;
     }
 
     return 1;
 
 }
 
-var GLU = {};
+}
 
-(function ($) {
 
-    $.unProject = function (winX, winY, winZ, model, proj, view, objPos) {
 
-        var inp = [
+class GLU {
+
+    public static unProject(winX, winY, winZ, model, proj, view, objPos) {
+
+        let inp = [
             winX,
             winY,
             winZ,
             1.0
         ];
 
-        var finalMatrix = [];
+        let finalMatrix = [];
 
-        $.multMatrices(model, proj, finalMatrix);
-        if (!$.invertMatrix(finalMatrix, finalMatrix)) {
+        this.multMatrices(model, proj, finalMatrix);
+        if (!this.invertMatrix(finalMatrix, finalMatrix)) {
             return (false);
         }
 
@@ -1407,9 +1446,9 @@ var GLU = {};
         inp[1] = inp[1] * 2 - 1;
         inp[2] = inp[2] * 2 - 1;
 
-        var out = [];
+        let out = [];
 
-        $.multMatrixVec(finalMatrix, inp, out);
+        this.multMatrixVec(finalMatrix, inp, out);
 
         if (out[3] === 0.0) {
             return false;
@@ -1426,8 +1465,8 @@ var GLU = {};
         return true;
     };
 
-    $.multMatrixVec = function (matrix, inp, out) {
-        for (var i = 0; i < 4; i = i + 1) {
+    public static multMatrixVec(matrix, inp, out) {
+        for (let i = 0; i < 4; i = i + 1) {
             out[i] =
                 inp[0] * matrix[0 * 4 + i] +
                 inp[1] * matrix[1 * 4 + i] +
@@ -1436,9 +1475,9 @@ var GLU = {};
         }
     };
 
-    $.multMatrices = function (a, b, r) {
-        for (var i = 0; i < 4; i = i + 1) {
-            for (var j = 0; j < 4; j = j + 1) {
+    public static multMatrices(a, b, r) {
+        for (let i = 0; i < 4; i = i + 1) {
+            for (let j = 0; j < 4; j = j + 1) {
                 r[i * 4 + j] =
                     a[i * 4 + 0] * b[0 * 4 + j] +
                     a[i * 4 + 1] * b[1 * 4 + j] +
@@ -1448,9 +1487,9 @@ var GLU = {};
         }
     };
 
-    $.invertMatrix = function (m, invOut) {
+    public static invertMatrix(m, invOut) {
 
-        var inv = [];
+        let inv = [];
 
         inv[0] = m[5] * m[10] * m[15] - m[5] * m[11] * m[14] - m[9] * m[6] * m[15] +
             m[9] * m[7] * m[14] + m[13] * m[6] * m[11] - m[13] * m[7] * m[10];
@@ -1485,7 +1524,7 @@ var GLU = {};
         inv[15] = m[0] * m[5] * m[10] - m[0] * m[6] * m[9] - m[4] * m[1] * m[10] +
             m[4] * m[2] * m[9] + m[8] * m[1] * m[6] - m[8] * m[2] * m[5];
 
-        var det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
+        let det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
 
         if (det === 0) {
             return false;
@@ -1493,11 +1532,11 @@ var GLU = {};
 
         det = 1.0 / det;
 
-        for (var i = 0; i < 16; i = i + 1) {
+        for (let i = 0; i < 16; i = i + 1) {
             invOut[i] = inv[i] * det;
         }
 
         return true;
     };
 
-} (GLU));
+}
