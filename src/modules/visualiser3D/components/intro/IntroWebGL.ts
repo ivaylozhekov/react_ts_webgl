@@ -10,31 +10,31 @@ export default class Visualiser {
     private gl;
     private vertices;
     private normals;
-    private Tr_colors;
-    private Tr_indices;
-    private L_indices;
-    private _canvas;
+    private trColors;
+    private trIndices;
+    private lineIndices;
+    private canvas;
     private shaderProgram;
     private mvMatrix;
     private mvMatrixStack;
     private pMatrix;
     private rotationMatrix;
 
-    private E_X1
-    private E_Y1;
+    private eX1;
+    private eY1;
 
-    private Mid_X
-    private Mid_Y;
+    private midX;
+    private midY;
 
-    private VertexPositionBuffer;
-    private FacesVertexNormalBuffer;
-    private FacesVertexColorBuffer;
-    private LinesVertexColorBuffer;
-    private FacesVertexIndexBuffer;
-    private LinesVertexIndexBuffer;
+    private vertexPositionBuffer;
+    private facesVertexNormalBuffer;
+    private facesVertexColorBuffer;
+    private linesVertexColorBuffer;
+    private facesVertexIndexBuffer;
+    private linesVertexIndexBuffer;
 
-    private Selected_Part_Color;
-    private Active_Part_Color;
+    private selectedPartColor;
+    private activePartColor;
 
     private waveHeightA;
     private waveSpeedA;
@@ -52,21 +52,39 @@ export default class Visualiser {
     private ZI;
     private TI;
 
-    private canv_Width;
-    private canv_Height;
-    private Current_View;
+    private canvasWidth;
+    private canvasHeight;
+    private currentView;
     private Epsilon;
 
     private parts;
 
     private RS_3D;
 
+    private showFaces;
+    private SelectMode;
+    private anim;
+
+    private xDeg;
+    private yDeg;
+    private EX;
+    private EY;
+    private EDX;
+    private EDY;
+    private E_X;
+    private E_Y;
+
+    private activePart;
+    private activeAssembly;
+    private selectedPart;
+    private selectedAssembly;
+
     constructor(canvas, animate) {
         this.vertices = [];
         this.normals = [];
-        this.Tr_colors = [];
-        this.Tr_indices = [];
-        this.L_indices = [];
+        this.trColors = [];
+        this.trIndices = [];
+        this.lineIndices = [];
         this.parts = [];
         this.RS_3D = [];
         this.mvMatrixStack = [];
@@ -74,8 +92,8 @@ export default class Visualiser {
         this.pMatrix = mat4.create();
         this.rotationMatrix = mat4.create();
         mat4.identity(this.rotationMatrix);
-        this.Selected_Part_Color = new Array(1, 0, 0, 1);
-        this.Active_Part_Color = new Array(1, 1, 0, 1);
+        this.selectedPartColor = new Array(1, 0, 0, 1);
+        this.activePartColor = new Array(1, 1, 0, 1);
         this.waveHeightA = 3;
         this.waveSpeedA = 1.5;
         this.waveOffsetA = 4;
@@ -91,34 +109,34 @@ export default class Visualiser {
     }
 
     private initGL(canvas) {
-        this._canvas = canvas
+        this.canvas = canvas;
         try {
-            this.gl = canvas.getContext("webgl");
+            this.gl = canvas.getContext('webgl');
             this.gl.viewportWidth = canvas.width;
             this.gl.viewportHeight = canvas.height;
         } catch (e) {
         }
         if (!this.gl) {
-            alert("Could not initialise WebGL!");
+            alert('Could not initialise WebGL!');
         }
     }
 
     private getShader(gl, type) {
-        let shaderStr = "";
-        if (type == "x-fragment") {
+        let shaderStr = '';
+        if (type === 'x-fragment') {
             shaderStr = require('webpack-glsl!./shaders/x-fragment.glsl').slice(18, -1);
-        } else if (type == "x-vertex") {
+        } else if (type === 'x-vertex') {
             shaderStr = require('webpack-glsl!./shaders/x-vertex.glsl').slice(18, -1);
         } else {
             return null;
         }
 
-        let str = shaderStr.replace(/(\\r\\n|\\n|\\r)/gm, " ");
+        let str = shaderStr.replace(/(\\r\\n|\\n|\\r)/gm, ' ');
 
         let shader;
-        if (type == "x-fragment") {
+        if (type == 'x-fragment') {
             shader = gl.createShader(gl.FRAGMENT_SHADER);
-        } else if (type == "x-vertex") {
+        } else if (type == 'x-vertex') {
             shader = gl.createShader(gl.VERTEX_SHADER);
         } else {
             return null;
@@ -138,8 +156,8 @@ export default class Visualiser {
 
 
     private initShaders() {
-        let fragmentShader = this.getShader(this.gl, "x-fragment");
-        let vertexShader = this.getShader(this.gl, "x-vertex");
+        let fragmentShader = this.getShader(this.gl, 'x-fragment');
+        let vertexShader = this.getShader(this.gl, 'x-vertex');
 
         this.shaderProgram = this.gl.createProgram();
         this.gl.attachShader(this.shaderProgram, vertexShader);
@@ -147,29 +165,29 @@ export default class Visualiser {
         this.gl.linkProgram(this.shaderProgram);
 
         if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
-            alert("Could not initialise shaders");
+            alert('Could not initialise shaders');
         }
 
         this.gl.useProgram(this.shaderProgram);
 
-        this.shaderProgram.vertexPositionAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexPosition");
+        this.shaderProgram.vertexPositionAttribute = this.gl.getAttribLocation(this.shaderProgram, 'aVertexPosition');
         this.gl.enableVertexAttribArray(this.shaderProgram.vertexPositionAttribute);
 
-        this.shaderProgram.vertexNormalAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexNormal");
+        this.shaderProgram.vertexNormalAttribute = this.gl.getAttribLocation(this.shaderProgram, 'aVertexNormal');
         this.gl.enableVertexAttribArray(this.shaderProgram.vertexNormalAttribute);
 
-        this.shaderProgram.vertexColorAttribute = this.gl.getAttribLocation(this.shaderProgram, "aVertexColor");
+        this.shaderProgram.vertexColorAttribute = this.gl.getAttribLocation(this.shaderProgram, 'aVertexColor');
         this.gl.enableVertexAttribArray(this.shaderProgram.vertexColorAttribute);
 
-        this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uPMatrix");
-        this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
-        this.shaderProgram.nMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uNMatrix");
-        this.shaderProgram.samplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler");
-        this.shaderProgram.useLightingUniform = this.gl.getUniformLocation(this.shaderProgram, "uUseLighting");
-        this.shaderProgram.ambientColorUniform = this.gl.getUniformLocation(this.shaderProgram, "uAmbientColor");
-        this.shaderProgram.lightingDirectionUniform = this.gl.getUniformLocation(this.shaderProgram, "uLightingDirection");
-        this.shaderProgram.directionalColorUniform = this.gl.getUniformLocation(this.shaderProgram, "uDirectionalColor");
-        this.shaderProgram.alphaUniform = this.gl.getUniformLocation(this.shaderProgram, "uAlpha");
+        this.shaderProgram.pMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
+        this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
+        this.shaderProgram.nMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, 'uNMatrix');
+        this.shaderProgram.samplerUniform = this.gl.getUniformLocation(this.shaderProgram, 'uSampler');
+        this.shaderProgram.useLightingUniform = this.gl.getUniformLocation(this.shaderProgram, 'uUseLighting');
+        this.shaderProgram.ambientColorUniform = this.gl.getUniformLocation(this.shaderProgram, 'uAmbientColor');
+        this.shaderProgram.lightingDirectionUniform = this.gl.getUniformLocation(this.shaderProgram, 'uLightingDirection');
+        this.shaderProgram.directionalColorUniform = this.gl.getUniformLocation(this.shaderProgram, 'uDirectionalColor');
+        this.shaderProgram.alphaUniform = this.gl.getUniformLocation(this.shaderProgram, 'uAlpha');
     }
 
 
@@ -183,7 +201,7 @@ export default class Visualiser {
 
     private mvPopMatrix() {
         if (this.mvMatrixStack.length == 0) {
-            throw "Invalid popMatrix!";
+            throw 'Invalid popMatrix!';
         }
         this.mvMatrix = this.mvMatrixStack.pop();
     }
@@ -273,11 +291,11 @@ private MouseWheelHandler(event) {
             Sign1 = -1.0;
     }
 
-    this.Current_View.PowerDX_1 = this.Current_View.PowerDX_1 - this.E_X1 * Sign1 * Math.abs(delta / 100);
-    this.Current_View.PowerDY_1 = this.Current_View.PowerDY_1 - this.E_Y1 * Sign1 * Math.abs(delta / 100);
-    this.Current_View.PowerS = this.Current_View.PowerS + delta;
+    this.currentView.PowerDX_1 = this.currentView.PowerDX_1 - this.eX1 * Sign1 * Math.abs(delta / 100);
+    this.currentView.PowerDY_1 = this.currentView.PowerDY_1 - this.eY1 * Sign1 * Math.abs(delta / 100);
+    this.currentView.PowerS = this.currentView.PowerS + delta;
 
-    if (this.anim == false) {
+    if (this.anim === false) {
         this.drawScene();
     }
 
@@ -287,7 +305,7 @@ private MouseWheelHandler(event) {
 
 private handleMouseDown(event) {
 
-    if (event.which == 2) {
+    if (event.which === 2) {
 
         this.EX = event.clientX;
         this.EY = event.clientY;
@@ -295,9 +313,9 @@ private handleMouseDown(event) {
         this.EDX = event.clientX;
         this.EDY = event.clientY;
     }
-    if (event.which == 1) {
+    if (event.which === 1) {
 
-        if (this.SelectMode == true) {
+        if (this.SelectMode) {
             let Mouse_Ray = this.Get3DRay(event.clientX - 362, event.clientY - 116);
 
 
@@ -347,9 +365,9 @@ private handleMouseDown(event) {
                         S1 = Hit_List[min_ind].Part;
                     }
                 }
-                let Prev_0 = this.Selected_Part;
+                let Prev_0 = this.selectedPart;
 
-                this.Selected_Part = S1;
+                this.selectedPart = S1;
 
                 if (Prev_0 != S1) {
 
@@ -361,10 +379,10 @@ private handleMouseDown(event) {
             }
         }
         else {
-            let Prev = this.Selected_Part;
-            this.Selected_Part = "";
-            this.Selected_Assembly = "";
-            if (Prev != "") {
+            let Prev = this.selectedPart;
+            this.selectedPart = '';
+            this.selectedAssembly = '';
+            if (Prev != '') {
 
                 this.initColorBuffers();
                 if (this.anim == false) {
@@ -377,38 +395,23 @@ private handleMouseDown(event) {
 
 }
 
-
-private xDeg;
-private yDeg;
-private EX;
-private EY;
-private EDX;
-private EDY;
-private E_X;
-private E_Y;
-
-private Active_Part;
-private Active_Assembly;
-private Selected_Part;
-private Selected_Assembly;
-
 private handleMouseMove(event) {
 
-    this.E_X1 = this.Mid_X - (event.clientX - 362);
-    this.E_Y1 = -this.Mid_Y + (event.clientY - 116);
+    this.eX1 = this.midX - (event.clientX - 362);
+    this.eY1 = -this.midY + (event.clientY - 116);
 
     if (event.which == 2) {
         this.E_X = event.clientX;
         this.E_Y = event.clientY;
 
         if (event.shiftKey == 1) {
-            this.Current_View.xDeg = this.Current_View.xDeg - this.EY + event.clientY;
-            this.Current_View.yDeg = this.Current_View.yDeg - this.EX + event.clientX;
+            this.currentView.xDeg = this.currentView.xDeg - this.EY + event.clientY;
+            this.currentView.yDeg = this.currentView.yDeg - this.EX + event.clientX;
             //rotate = true;
         }
         else {
-            this.Current_View.DistX = this.Current_View.DistX - this.EDX + event.clientX;
-            this.Current_View.DistY = this.Current_View.DistY + this.EDY - event.clientY;
+            this.currentView.DistX = this.currentView.DistX - this.EDX + event.clientX;
+            this.currentView.DistY = this.currentView.DistY + this.EDY - event.clientY;
         }
 
         this.EX = event.clientX;
@@ -468,9 +471,9 @@ private handleMouseMove(event) {
                         S1 = Hit_List[min_ind].Part;
                     }
                 }
-                let Prev_0 = this.Active_Part;
+                let Prev_0 = this.activePart;
 
-                this.Active_Part = S1;
+                this.activePart = S1;
 
                 if (Prev_0 != S1) {
 
@@ -480,10 +483,10 @@ private handleMouseMove(event) {
             }
         }
         else {
-            let Prev = this.Active_Part;
-            this.Active_Part = "";
-            this.Active_Assembly = "";
-            if (Prev != "") {
+            let Prev = this.activePart;
+            this.activePart = '';
+            this.activeAssembly = '';
+            if (Prev != '') {
 
                 this.initColorBuffers();
                 //drawScene();
@@ -498,98 +501,98 @@ private handleMouseMove(event) {
 
 private initColorBuffers() {
 
-    if (this.Active_Part != "") {
-        let Tr_colors_1 = new Array();
+    if (this.activePart != '') {
+        let trColors_1 = new Array();
 
         for (let p_num = 0; p_num < this.parts.length; p_num++) {
 
-            Tr_colors_1[p_num * 12 + 0] = this.Tr_colors[p_num * 12 + 0];
-            Tr_colors_1[p_num * 12 + 1] = this.Tr_colors[p_num * 12 + 1];
-            Tr_colors_1[p_num * 12 + 2] = this.Tr_colors[p_num * 12 + 2];
-            Tr_colors_1[p_num * 12 + 3] = this.Tr_colors[p_num * 12 + 3];
-            Tr_colors_1[p_num * 12 + 4] = this.Tr_colors[p_num * 12 + 4];
-            Tr_colors_1[p_num * 12 + 5] = this.Tr_colors[p_num * 12 + 5];
-            Tr_colors_1[p_num * 12 + 6] = this.Tr_colors[p_num * 12 + 6];
-            Tr_colors_1[p_num * 12 + 7] = this.Tr_colors[p_num * 12 + 7];
-            Tr_colors_1[p_num * 12 + 8] = this.Tr_colors[p_num * 12 + 8];
-            Tr_colors_1[p_num * 12 + 9] = this.Tr_colors[p_num * 12 + 9];
-            Tr_colors_1[p_num * 12 + 10] = this.Tr_colors[p_num * 12 + 10];
-            Tr_colors_1[p_num * 12 + 11] = this.Tr_colors[p_num * 12 + 11];
+            trColors_1[p_num * 12 + 0] = this.trColors[p_num * 12 + 0];
+            trColors_1[p_num * 12 + 1] = this.trColors[p_num * 12 + 1];
+            trColors_1[p_num * 12 + 2] = this.trColors[p_num * 12 + 2];
+            trColors_1[p_num * 12 + 3] = this.trColors[p_num * 12 + 3];
+            trColors_1[p_num * 12 + 4] = this.trColors[p_num * 12 + 4];
+            trColors_1[p_num * 12 + 5] = this.trColors[p_num * 12 + 5];
+            trColors_1[p_num * 12 + 6] = this.trColors[p_num * 12 + 6];
+            trColors_1[p_num * 12 + 7] = this.trColors[p_num * 12 + 7];
+            trColors_1[p_num * 12 + 8] = this.trColors[p_num * 12 + 8];
+            trColors_1[p_num * 12 + 9] = this.trColors[p_num * 12 + 9];
+            trColors_1[p_num * 12 + 10] = this.trColors[p_num * 12 + 10];
+            trColors_1[p_num * 12 + 11] = this.trColors[p_num * 12 + 11];
 
-            if (this.parts[p_num] == this.Active_Part) {
-                Tr_colors_1[p_num * 12 + 0] = this.Active_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 1] = this.Active_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 2] = this.Active_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 3] = this.Active_Part_Color[3];
-                Tr_colors_1[p_num * 12 + 4] = this.Active_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 5] = this.Active_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 6] = this.Active_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 7] = this.Active_Part_Color[3];
-                Tr_colors_1[p_num * 12 + 8] = this.Active_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 9] = this.Active_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 10] = this.Active_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 11] = this.Active_Part_Color[3];
+            if (this.parts[p_num] == this.activePart) {
+                trColors_1[p_num * 12 + 0] = this.activePartColor[0];
+                trColors_1[p_num * 12 + 1] = this.activePartColor[1];
+                trColors_1[p_num * 12 + 2] = this.activePartColor[2];
+                trColors_1[p_num * 12 + 3] = this.activePartColor[3];
+                trColors_1[p_num * 12 + 4] = this.activePartColor[0];
+                trColors_1[p_num * 12 + 5] = this.activePartColor[1];
+                trColors_1[p_num * 12 + 6] = this.activePartColor[2];
+                trColors_1[p_num * 12 + 7] = this.activePartColor[3];
+                trColors_1[p_num * 12 + 8] = this.activePartColor[0];
+                trColors_1[p_num * 12 + 9] = this.activePartColor[1];
+                trColors_1[p_num * 12 + 10] = this.activePartColor[2];
+                trColors_1[p_num * 12 + 11] = this.activePartColor[3];
             }
 
-            if (this.parts[p_num] == this.Selected_Part) {
-                Tr_colors_1[p_num * 12 + 0] = this.Selected_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 1] = this.Selected_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 2] = this.Selected_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 3] = this.Selected_Part_Color[3];
-                Tr_colors_1[p_num * 12 + 4] = this.Selected_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 5] = this.Selected_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 6] = this.Selected_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 7] = this.Selected_Part_Color[3];
-                Tr_colors_1[p_num * 12 + 8] = this.Selected_Part_Color[0];
-                Tr_colors_1[p_num * 12 + 9] = this.Selected_Part_Color[1];
-                Tr_colors_1[p_num * 12 + 10] = this.Selected_Part_Color[2];
-                Tr_colors_1[p_num * 12 + 11] = this.Selected_Part_Color[3];
+            if (this.parts[p_num] == this.selectedPart) {
+                trColors_1[p_num * 12 + 0] = this.selectedPartColor[0];
+                trColors_1[p_num * 12 + 1] = this.selectedPartColor[1];
+                trColors_1[p_num * 12 + 2] = this.selectedPartColor[2];
+                trColors_1[p_num * 12 + 3] = this.selectedPartColor[3];
+                trColors_1[p_num * 12 + 4] = this.selectedPartColor[0];
+                trColors_1[p_num * 12 + 5] = this.selectedPartColor[1];
+                trColors_1[p_num * 12 + 6] = this.selectedPartColor[2];
+                trColors_1[p_num * 12 + 7] = this.selectedPartColor[3];
+                trColors_1[p_num * 12 + 8] = this.selectedPartColor[0];
+                trColors_1[p_num * 12 + 9] = this.selectedPartColor[1];
+                trColors_1[p_num * 12 + 10] = this.selectedPartColor[2];
+                trColors_1[p_num * 12 + 11] = this.selectedPartColor[3];
             }
 
         }
 
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexColorBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(Tr_colors_1), this.gl.STREAM_DRAW);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.facesVertexColorBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(trColors_1), this.gl.STREAM_DRAW);
 
     }
     else {
-        let Tr_colors_2 = new Array();
+        let trColors_2 = new Array();
 
         for (let p_num_2 = 0; p_num_2 < this.parts.length; p_num_2++) {
 
-            if (this.parts[p_num_2] == this.Selected_Part) {
-                Tr_colors_2[p_num_2 * 12 + 0] = this.Selected_Part_Color[0];
-                Tr_colors_2[p_num_2 * 12 + 1] = this.Selected_Part_Color[1];
-                Tr_colors_2[p_num_2 * 12 + 2] = this.Selected_Part_Color[2];
-                Tr_colors_2[p_num_2 * 12 + 3] = this.Selected_Part_Color[3];
-                Tr_colors_2[p_num_2 * 12 + 4] = this.Selected_Part_Color[0];
-                Tr_colors_2[p_num_2 * 12 + 5] = this.Selected_Part_Color[1];
-                Tr_colors_2[p_num_2 * 12 + 6] = this.Selected_Part_Color[2];
-                Tr_colors_2[p_num_2 * 12 + 7] = this.Selected_Part_Color[3];
-                Tr_colors_2[p_num_2 * 12 + 8] = this.Selected_Part_Color[0];
-                Tr_colors_2[p_num_2 * 12 + 9] = this.Selected_Part_Color[1];
-                Tr_colors_2[p_num_2 * 12 + 10] = this.Selected_Part_Color[2];
-                Tr_colors_2[p_num_2 * 12 + 11] = this.Selected_Part_Color[3];
+            if (this.parts[p_num_2] === this.selectedPart) {
+                trColors_2[p_num_2 * 12 + 0] = this.selectedPartColor[0];
+                trColors_2[p_num_2 * 12 + 1] = this.selectedPartColor[1];
+                trColors_2[p_num_2 * 12 + 2] = this.selectedPartColor[2];
+                trColors_2[p_num_2 * 12 + 3] = this.selectedPartColor[3];
+                trColors_2[p_num_2 * 12 + 4] = this.selectedPartColor[0];
+                trColors_2[p_num_2 * 12 + 5] = this.selectedPartColor[1];
+                trColors_2[p_num_2 * 12 + 6] = this.selectedPartColor[2];
+                trColors_2[p_num_2 * 12 + 7] = this.selectedPartColor[3];
+                trColors_2[p_num_2 * 12 + 8] = this.selectedPartColor[0];
+                trColors_2[p_num_2 * 12 + 9] = this.selectedPartColor[1];
+                trColors_2[p_num_2 * 12 + 10] = this.selectedPartColor[2];
+                trColors_2[p_num_2 * 12 + 11] = this.selectedPartColor[3];
             }
             else {
-                Tr_colors_2[p_num_2 * 12 + 0] = this.Tr_colors[p_num_2 * 12 + 0];
-                Tr_colors_2[p_num_2 * 12 + 1] = this.Tr_colors[p_num_2 * 12 + 1];
-                Tr_colors_2[p_num_2 * 12 + 2] = this.Tr_colors[p_num_2 * 12 + 2];
-                Tr_colors_2[p_num_2 * 12 + 3] = this.Tr_colors[p_num_2 * 12 + 3];
-                Tr_colors_2[p_num_2 * 12 + 4] = this.Tr_colors[p_num_2 * 12 + 4];
-                Tr_colors_2[p_num_2 * 12 + 5] = this.Tr_colors[p_num_2 * 12 + 5];
-                Tr_colors_2[p_num_2 * 12 + 6] = this.Tr_colors[p_num_2 * 12 + 6];
-                Tr_colors_2[p_num_2 * 12 + 7] = this.Tr_colors[p_num_2 * 12 + 7];
-                Tr_colors_2[p_num_2 * 12 + 8] = this.Tr_colors[p_num_2 * 12 + 8];
-                Tr_colors_2[p_num_2 * 12 + 9] = this.Tr_colors[p_num_2 * 12 + 9];
-                Tr_colors_2[p_num_2 * 12 + 10] = this.Tr_colors[p_num_2 * 12 + 10];
-                Tr_colors_2[p_num_2 * 12 + 11] = this.Tr_colors[p_num_2 * 12 + 11];
+                trColors_2[p_num_2 * 12 + 0] = this.trColors[p_num_2 * 12 + 0];
+                trColors_2[p_num_2 * 12 + 1] = this.trColors[p_num_2 * 12 + 1];
+                trColors_2[p_num_2 * 12 + 2] = this.trColors[p_num_2 * 12 + 2];
+                trColors_2[p_num_2 * 12 + 3] = this.trColors[p_num_2 * 12 + 3];
+                trColors_2[p_num_2 * 12 + 4] = this.trColors[p_num_2 * 12 + 4];
+                trColors_2[p_num_2 * 12 + 5] = this.trColors[p_num_2 * 12 + 5];
+                trColors_2[p_num_2 * 12 + 6] = this.trColors[p_num_2 * 12 + 6];
+                trColors_2[p_num_2 * 12 + 7] = this.trColors[p_num_2 * 12 + 7];
+                trColors_2[p_num_2 * 12 + 8] = this.trColors[p_num_2 * 12 + 8];
+                trColors_2[p_num_2 * 12 + 9] = this.trColors[p_num_2 * 12 + 9];
+                trColors_2[p_num_2 * 12 + 10] = this.trColors[p_num_2 * 12 + 10];
+                trColors_2[p_num_2 * 12 + 11] = this.trColors[p_num_2 * 12 + 11];
             }
 
         }
 
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexColorBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(Tr_colors_2), this.gl.STREAM_DRAW);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.facesVertexColorBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(trColors_2), this.gl.STREAM_DRAW);
 
     }
 
@@ -679,12 +682,12 @@ private animate() {
 
         let x = this.vertices[i + 0];
         let y = this.vertices[i + 2];
-        //alert("lalal");
+        //alert('lalal');
         this.vertices[i + 1] = this.waveA(x, y, this.elapsed * 0.012);
         this.vertices[i + 1] = this.vertices[i + 1] + this.waveB(x, y, this.elapsed * 0.012);
     }
-    if (this.show_faces) {
-        if (this.elapsed % 3 == 0) {
+    if (this.showFaces) {
+        if (this.elapsed % 3 === 0) {
             let Sa_Num = Math.sqrt(this.vertices.length / 3);
             let RS_Count = Sa_Num;
             let N1 = new Array();
@@ -825,18 +828,18 @@ private UpdateBuffers() {
 
 
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.VertexPositionBuffer);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexPositionBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.vertices), this.gl.STREAM_DRAW);
 
-    //gl.bindBuffer(gl.ARRAY_BUFFER, FacesVertexNormalBuffer);
+    //gl.bindBuffer(gl.ARRAY_BUFFER, facesVertexNormalBuffer);
     //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.DYNAMIC_DRAW);
 
 }
 
 private Surface_Strip() {
     this.vertices = new Array();
-    this.Tr_colors = new Array();
-    this.Tr_indices = new Array();
+    this.trColors = new Array();
+    this.trIndices = new Array();
     this.normals = new Array();
 }
 
@@ -873,25 +876,25 @@ private init_Surface_Geom() {
                 this.vertices[(f + (m - 1) * ACC_Len) * 3 + 1] = this.RS_3D[i][f];
                 this.vertices[(f + (m - 1) * ACC_Len) * 3 + 2] = (f * step);
 
-                this.Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 0] = 0;
-                this.Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 1] = 1;
-                this.Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 2] = 0;
-                this.Tr_colors[(f + (m - 1) * ACC_Len) * 4 + 3] = 1;
+                this.trColors[(f + (m - 1) * ACC_Len) * 4 + 0] = 0;
+                this.trColors[(f + (m - 1) * ACC_Len) * 4 + 1] = 1;
+                this.trColors[(f + (m - 1) * ACC_Len) * 4 + 2] = 0;
+                this.trColors[(f + (m - 1) * ACC_Len) * 4 + 3] = 1;
 
                 if (m < RS_Count) {
                     if (f < ACC_Len - 1) {
 
-                        this.Tr_indices[n] = f + (m - 1) * ACC_Len;
+                        this.trIndices[n] = f + (m - 1) * ACC_Len;
                         n++;
-                        this.Tr_indices[n] = (f + 1) + (m - 1) * ACC_Len;
+                        this.trIndices[n] = (f + 1) + (m - 1) * ACC_Len;
                         n++;
-                        this.Tr_indices[n] = f + m * ACC_Len;
+                        this.trIndices[n] = f + m * ACC_Len;
                         n++;
-                        this.Tr_indices[n] = f + m * ACC_Len;
+                        this.trIndices[n] = f + m * ACC_Len;
                         n++;
-                        this.Tr_indices[n] = (f + 1) + (m - 1) * ACC_Len;
+                        this.trIndices[n] = (f + 1) + (m - 1) * ACC_Len;
                         n++;
-                        this.Tr_indices[n] = (f + 1) + m * ACC_Len;
+                        this.trIndices[n] = (f + 1) + m * ACC_Len;
                         n++;
                     }
                 }
@@ -978,37 +981,37 @@ private init_Surface_Geom() {
 
 private initBuffers() {
 
-    this.VertexPositionBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.VertexPositionBuffer);
+    this.vertexPositionBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexPositionBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.vertices), this.gl.STREAM_DRAW);
-    this.VertexPositionBuffer.itemSize = 3;
-    this.VertexPositionBuffer.numItems = this.vertices.length / 3;
+    this.vertexPositionBuffer.itemSize = 3;
+    this.vertexPositionBuffer.numItems = this.vertices.length / 3;
 
 
-    this.FacesVertexNormalBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexNormalBuffer);
+    this.facesVertexNormalBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.facesVertexNormalBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.normals), this.gl.STREAM_DRAW);
-    this.FacesVertexNormalBuffer.itemSize = 3;
-    this.FacesVertexNormalBuffer.numItems = this.normals.length / 3;
+    this.facesVertexNormalBuffer.itemSize = 3;
+    this.facesVertexNormalBuffer.numItems = this.normals.length / 3;
 
-    this.FacesVertexColorBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexColorBuffer);
-    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.Tr_colors), this.gl.STATIC_DRAW);
-    this.FacesVertexColorBuffer.itemSize = 4;
-    this.FacesVertexColorBuffer.numItems = this.Tr_colors.length / 4;
+    this.facesVertexColorBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.facesVertexColorBuffer);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.trColors), this.gl.STATIC_DRAW);
+    this.facesVertexColorBuffer.itemSize = 4;
+    this.facesVertexColorBuffer.numItems = this.trColors.length / 4;
 
-    this.FacesVertexIndexBuffer = this.gl.createBuffer();
-    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.FacesVertexIndexBuffer);
-    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.Tr_indices), this.gl.STATIC_DRAW);
-    this.FacesVertexIndexBuffer.itemSize = 1;
-    this.FacesVertexIndexBuffer.numItems = this.Tr_indices.length;
-    //alert(this.Tr_indices.length);
-    if (this.anim == true) {
-        this.LinesVertexIndexBuffer = this.gl.createBuffer();
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.LinesVertexIndexBuffer);
-        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.L_indices), this.gl.STATIC_DRAW);
-        this.LinesVertexIndexBuffer.itemSize = 1;
-        this.LinesVertexIndexBuffer.numItems = this.L_indices.length;
+    this.facesVertexIndexBuffer = this.gl.createBuffer();
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.facesVertexIndexBuffer);
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.trIndices), this.gl.STATIC_DRAW);
+    this.facesVertexIndexBuffer.itemSize = 1;
+    this.facesVertexIndexBuffer.numItems = this.trIndices.length;
+    //alert(this.trIndices.length);
+    if (this.anim) {
+        this.linesVertexIndexBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.linesVertexIndexBuffer);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.lineIndices), this.gl.STATIC_DRAW);
+        this.linesVertexIndexBuffer.itemSize = 1;
+        this.linesVertexIndexBuffer.numItems = this.lineIndices.length;
     }
 
     // --------------------------
@@ -1019,22 +1022,22 @@ private initBuffers() {
 private drawScene() {
 
 
-    this.show_faces = false;
+    this.showFaces = false;
 
-    if (this.Current_View.Rotate_Incr == 0)
+    if (this.currentView.Rotate_Incr === 0)
         this.RI = 0.5;
     else
-        this.RI = this.Current_View.Rotate_Incr;
+        this.RI = this.currentView.Rotate_Incr;
 
-    if (this.Current_View.Zoom_Incr == 0)
+    if (this.currentView.Zoom_Incr === 0)
         this.ZI = 0.002;
     else
-        this.ZI = this.Current_View.Zoom_Incr;
+        this.ZI = this.currentView.Zoom_Incr;
 
-    if (this.Current_View.Translate_Incr == 0)
+    if (this.currentView.Translate_Incr === 0)
         this.TI = 0.0002;
     else
-        this.TI = this.Current_View.Translate_Incr;
+        this.TI = this.currentView.Translate_Incr;
 
     this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
@@ -1043,9 +1046,9 @@ private drawScene() {
 
     mat4.identity(this.mvMatrix);
 
-    mat4.translate(this.mvMatrix, this.mvMatrix, [(this.Current_View.DistX * this.TI + this.Current_View.PowerDX_1 * this.ZI * 1.05 / 10), (this.Current_View.DistY * this.TI + this.Current_View.PowerDY_1 * this.ZI * 1.05 / 10), (this.Current_View.DistZ + this.Current_View.PowerS * this.ZI)]);
-    mat4.rotate(this.mvMatrix, this.mvMatrix, this.degToRad(this.Current_View.xDeg * this.Current_View.Rotate_Incr), [1, 0, 0]);
-    mat4.rotate(this.mvMatrix, this.mvMatrix, this.degToRad(this.Current_View.yDeg * this.Current_View.Rotate_Incr), [0, 1, 0]);
+    mat4.translate(this.mvMatrix, this.mvMatrix, [(this.currentView.DistX * this.TI + this.currentView.PowerDX_1 * this.ZI * 1.05 / 10), (this.currentView.DistY * this.TI + this.currentView.PowerDY_1 * this.ZI * 1.05 / 10), (this.currentView.DistZ + this.currentView.PowerS * this.ZI)]);
+    mat4.rotate(this.mvMatrix, this.mvMatrix, this.degToRad(this.currentView.xDeg * this.currentView.Rotate_Incr), [1, 0, 0]);
+    mat4.rotate(this.mvMatrix, this.mvMatrix, this.degToRad(this.currentView.yDeg * this.currentView.Rotate_Incr), [0, 1, 0]);
 
 
     let lighting = true;
@@ -1068,83 +1071,80 @@ private drawScene() {
     this.gl.uniform1f(this.shaderProgram.alphaUniform, 1)
     this.gl.enable(this.gl.DEPTH_TEST);
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.VertexPositionBuffer);
-    this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.VertexPositionBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexPositionBuffer);
+    this.gl.vertexAttribPointer(this.shaderProgram.vertexPositionAttribute, this.vertexPositionBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexNormalBuffer);
-    this.gl.vertexAttribPointer(this.shaderProgram.vertexNormalAttribute, this.FacesVertexNormalBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.facesVertexNormalBuffer);
+    this.gl.vertexAttribPointer(this.shaderProgram.vertexNormalAttribute, this.facesVertexNormalBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.FacesVertexColorBuffer);
-    this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.FacesVertexColorBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.facesVertexColorBuffer);
+    this.gl.vertexAttribPointer(this.shaderProgram.vertexColorAttribute, this.facesVertexColorBuffer.itemSize, this.gl.FLOAT, false, 0, 0);
 
-    if (this.anim == true) {
-        if (this.show_faces) {
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.FacesVertexIndexBuffer);
+    if (this.anim) {
+        if (this.showFaces) {
+            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.facesVertexIndexBuffer);
             this.setMatrixUniforms();
-            //gl.drawArrays(gl.TRIANGLES, 0, FacesVertexIndexBuffer.numItems);
-            this.gl.drawElements(this.gl.TRIANGLES, this.FacesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
+            //gl.drawArrays(gl.TRIANGLES, 0, facesVertexIndexBuffer.numItems);
+            this.gl.drawElements(this.gl.TRIANGLES, this.facesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
         }
     }
     else {
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.FacesVertexIndexBuffer);
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.facesVertexIndexBuffer);
         this.setMatrixUniforms();
-        //gl.drawArrays(gl.TRIANGLES, 0, FacesVertexIndexBuffer.numItems);
-        this.gl.drawElements(this.gl.TRIANGLES, this.FacesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
-        //alert(FacesVertexIndexBuffer.numItems);
+        //gl.drawArrays(gl.TRIANGLES, 0, facesVertexIndexBuffer.numItems);
+        this.gl.drawElements(this.gl.TRIANGLES, this.facesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
+        //alert(facesVertexIndexBuffer.numItems);
 
     }
-    //gl.bindBuffer(gl.ARRAY_BUFFER, LinesVertexColorBuffer);
-    //gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, LinesVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    //gl.bindBuffer(gl.ARRAY_BUFFER, linesVertexColorBuffer);
+    //gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, linesVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-    if (this.anim == true) {
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.LinesVertexIndexBuffer);
+    if (this.anim) {
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.linesVertexIndexBuffer);
         this.setMatrixUniforms();
-        this.gl.drawElements(this.gl.LINES, this.LinesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
+        this.gl.drawElements(this.gl.LINES, this.linesVertexIndexBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);
         let a = 0;
     }
     //gl.lineWidth(3.0);
     // ------------------------------------------------  Draw Bolts
 
-    //alert("LALALLALA 8");
+    //alert('LALALLALA 8');
 
     /* -------------------------------------------------  Display Mouse Ray  --------------------------------------------------
-    gl.bindBuffer(gl.ARRAY_BUFFER, Temp_LinesVertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, Temp_LinesVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, Temp_LinesvertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, Temp_LinesvertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Temp_LinesVertexIndexBuffer);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Temp_linesVertexIndexBuffer);
     setMatrixUniforms();
-    gl.drawElements(gl.LINES, Temp_LinesVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+    gl.drawElements(gl.LINES, Temp_linesVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
     */
 
 }
 
 private resizeCanvas() {
-    //let canvas = document.getElementById("worldmap_canvas1");
-    this.canv_Width = this._canvas.clientWidth;
-    this.canv_Height = this._canvas.clientHeight
+    //let canvas = document.getElementById('worldmapcanvas1');
+    this.canvasWidth = this.canvas.clientWidth;
+    this.canvasHeight = this.canvas.clientHeight;
     // only change the size of the canvas if the size it's being displayed
     // has changed.
-    if (this._canvas.width != this._canvas.clientWidth ||
-        this._canvas.height != this._canvas.clientHeight) {
+    if (this.canvas.width !== this.canvas.clientWidth ||
+        this.canvas.height !== this.canvas.clientHeight) {
         // Change the size of the canvas to match the size it's being displayed
-        this._canvas.width = this._canvas.clientWidth;
-        this._canvas.height = this._canvas.clientHeight;
+        this.canvas.width = this.canvas.clientWidth;
+        this.canvas.height = this.canvas.clientHeight;
     }
 
-    this.Mid_X = this._canvas.width / 2.0;
-    this.Mid_Y = this._canvas.height / 2.0;
+    this.midX = this.canvas.width / 2.0;
+    this.midY = this.canvas.height / 2.0;
 
     try {
-        this.gl.viewportWidth = this._canvas.width;
-        this.gl.viewportHeight = this._canvas.height;
+        this.gl.viewportWidth = this.canvas.width;
+        this.gl.viewportHeight = this.canvas.height;
         this.drawScene();
     }
     catch (e) { }
 
 }
-private show_faces;
-private SelectMode;
-private anim;
 
 public webGLStop() {
     this.anim = false;
@@ -1155,12 +1155,12 @@ private webGLStart(canvas, ANIME) {
     this.anim = ANIME;
 
     this.elapsed = 0;
-    this.show_faces = false;
+    this.showFaces = false;
     this.SelectMode = false;
 
-    this.Load_Current_View();
+    this.Load_currentView();
 
-    //let canvas = document.getElementById("worldmap_canvas1");
+    //let canvas = document.getElementById('worldmapcanvas1');
     this.resizeCanvas();
 
     this.initShaders();
@@ -1173,20 +1173,20 @@ private webGLStart(canvas, ANIME) {
     }
 
     for (i = 0; i < 14400; i++) {
-        this.Tr_colors.push(0);
+        this.trColors.push(0);
     }
 
-    if (this.vertices.length == 0) {
+    if (this.vertices.length === 0) {
 
         this.init_Surface_Geom();
     }
 
     for (i = 0; i < 20886; i++) {
-        this.Tr_indices.push(0);
+        this.trIndices.push(0);
     }
 
     for (i = 0; i < 14160; i++) {
-        this.L_indices.push(0);
+        this.lineIndices.push(0);
     }
 
     let m = 0, n = 0, n_L = 0, n_col = 0;
@@ -1204,45 +1204,45 @@ private webGLStart(canvas, ANIME) {
             this.vertices[(f + (m - 1) * 60) * 3 + 1] = 0;
             this.vertices[(f + (m - 1) * 60) * 3 + 2] = (f * step - 60);
 
-            this.Tr_colors[n_col++] = 0;
-            this.Tr_colors[n_col++] = 1;
-            this.Tr_colors[n_col++] = 0;
-            this.Tr_colors[n_col++] = 0.9;
+            this.trColors[n_col++] = 0;
+            this.trColors[n_col++] = 1;
+            this.trColors[n_col++] = 0;
+            this.trColors[n_col++] = 0.9;
             if (m < 60) {
                 if (f < 60 - 1) {
-                    this.Tr_indices[n] = f + (m - 1) * 60;
-                    this.L_indices[n_L] = f + (m - 1) * 60;
+                    this.trIndices[n] = f + (m - 1) * 60;
+                    this.lineIndices[n_L] = f + (m - 1) * 60;
                     n++;
                     n_L++;
-                    this.Tr_indices[n] = (f + 1) + (m - 1) * 60;
-                    this.L_indices[n_L] = (f + 1) + (m - 1) * 60;
+                    this.trIndices[n] = (f + 1) + (m - 1) * 60;
+                    this.lineIndices[n_L] = (f + 1) + (m - 1) * 60;
                     n++;
                     n_L++;
-                    this.Tr_indices[n] = f + m * 60;
+                    this.trIndices[n] = f + m * 60;
                     n++;
-                    this.Tr_indices[n] = f + m * 60;
+                    this.trIndices[n] = f + m * 60;
                     n++;
-                    this.Tr_indices[n] = (f + 1) + (m - 1) * 60;
-                    this.L_indices[n_L] = (f + 1) + (m - 1) * 60;
+                    this.trIndices[n] = (f + 1) + (m - 1) * 60;
+                    this.lineIndices[n_L] = (f + 1) + (m - 1) * 60;
                     n++;
                     n_L++;
-                    this.Tr_indices[n] = (f + 1) + m * 60;
-                    this.L_indices[n_L] = (f + 1) + m * 60;
+                    this.trIndices[n] = (f + 1) + m * 60;
+                    this.lineIndices[n_L] = (f + 1) + m * 60;
                     n++;
                     n_L++;
                 }
                 else {
-                    this.L_indices[n_L] = (m - 1) * 60;
+                    this.lineIndices[n_L] = (m - 1) * 60;
                     n_L++;
-                    this.L_indices[n_L] = m * 60;
+                    this.lineIndices[n_L] = m * 60;
                     n_L++;
                 }
             }
             else {
                 if (f < 60 - 1) {
-                    this.L_indices[n_L] = (f + 1) + (m - 1) * 60;
+                    this.lineIndices[n_L] = (f + 1) + (m - 1) * 60;
                     n_L++;
-                    this.L_indices[n_L] = f + (m - 1) * 60;
+                    this.lineIndices[n_L] = f + (m - 1) * 60;
                     n_L++;
                 }
             }
@@ -1252,7 +1252,7 @@ private webGLStart(canvas, ANIME) {
 
     let max = 0;
     for (i = 0; i < 14160; i++) {
-        if (this.L_indices[i] > max) max = this.L_indices[i];
+        if (this.lineIndices[i] > max) max = this.lineIndices[i];
     }
 
 
@@ -1271,10 +1271,10 @@ private webGLStart(canvas, ANIME) {
 
     this.gl.polygonOffset(2, 1);
 
-    this.Active_Part = "";
-    this.Active_Assembly = "";
-    this.Selected_Part = "";
-    this.Selected_Assembly = "";
+    this.activePart = '';
+    this.activeAssembly = '';
+    this.selectedPart = '';
+    this.selectedAssembly = '';
 
     // try {
     //     canvas.addEventListener('DOMMouseScroll', wheel, false);
@@ -1282,7 +1282,7 @@ private webGLStart(canvas, ANIME) {
     // catch (e) {
     // }
     try {
-        canvas.addEventListener("mousewheel", (e) => this.MouseWheelHandler(e), false);
+        canvas.addEventListener('mousewheel', (e) => this.MouseWheelHandler(e), false);
     }
     catch (e) {
     }
@@ -1293,7 +1293,7 @@ private webGLStart(canvas, ANIME) {
     canvas.onmousemove = e => this.handleMouseMove(e);
 
 
-    if (ANIME == true) {
+    if (ANIME) {
         this.tick();
     }
     else {
@@ -1301,9 +1301,9 @@ private webGLStart(canvas, ANIME) {
     }
 }
 
-private Load_Current_View() {
+private Load_currentView() {
     try {
-        this.Current_View = {
+        this.currentView = {
             DistX: 756,
             DistY: -97,
             DistZ: -35,
