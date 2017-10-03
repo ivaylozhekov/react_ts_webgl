@@ -3,7 +3,7 @@
 Requirements: `NodeJS > 4.x`
 
 ```bash
-git clone git@gitbud.epam.com:Andreyan_Andreev/react-redux-ts.git
+git clone git@gitbud.epam.com:Ivaylo_Zhekov/react-redux-ts.git
 cd react-redux-ts
 npm install
 cp ./app/src/.env.default.ts ./app/src/.env.ts
